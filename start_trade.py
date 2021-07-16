@@ -20,7 +20,8 @@ TOKEN_FILE = "/tmp/kite_token"
 
 
 def get_access_token():
-    logging.info("Copy {} , login and provide access token".format(kite.login_url()))
+    logging.info("Copy {} , login and"
+       " provide access token".format(kite.login_url()))
     return input("Enter Token:").strip()
 
 
@@ -29,7 +30,7 @@ def record_login(access_token):
     fd = open(TOKEN_FILE,"w")
     fd.write("{}:{}".format(time_now,access_token))
 
-def days_from_last_login():
+def get_last_login_date():
     token_file = Path(TOKEN_FILE)
     if not token_file.exists():
        #never logged in need a new session
@@ -38,14 +39,22 @@ def days_from_last_login():
     data = fd.read()
     pre_date = re.search("([\w\-]+)\:",data).group(1)
     y,m,d = map(int,pre_date.split("-"))
-    pre_date = datetime.date(y,m,d)
+    return  datetime.date(y,m,d)
+
+
+def days_from_last_login():
+    pre_date = get_last_login_date()
     date_now = datetime.date.today()
     return (date_now-pre_date).days
 
 def get_last_access_token():
-    fd = open(TOKEN_FILE,"r")
-    data = fd.read()
-    return re.search("\:(\w+)",data).group(1)
+    try:
+       fd = open(TOKEN_FILE,"r")
+       data = fd.read()
+       return re.search("\:(\w+)",data).group(1)
+    except  e:
+       logging.info("{} file might be deleted or modified.\n"
+            "please do \"rm -f {}\" it and rerun".format(TOKEN_FILE,TOKEN_FILE)) 
 
 
 def generate_session():
