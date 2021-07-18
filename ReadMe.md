@@ -20,6 +20,7 @@
   - One: create a requirements.txt and enumerate all the needed modules, single command will install all dependencies
   - Two: creaete w wheels package for the whole project, installation of wheel pull the dependencies and install the curren project as well.
   
+  Use .gitingore in pycache folders to avoid pushing them.
     
 ### How to Start trade
    After editing kite inputs.yaml and strategy_inputs.yaml execute
