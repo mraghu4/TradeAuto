@@ -31,10 +31,6 @@ def record_login(access_token):
     fd.write("{}:{}".format(time_now,access_token))
 
 def get_last_login_date():
-    token_file = Path(TOKEN_FILE)
-    if not token_file.exists():
-       #never logged in need a new session
-       return 1
     fd = open(TOKEN_FILE,"r")
     data = fd.read()
     pre_date = re.search("([\w\-]+)\:",data).group(1)
@@ -43,6 +39,10 @@ def get_last_login_date():
 
 
 def days_from_last_login():
+    token_file = Path(TOKEN_FILE)
+    if not token_file.exists():
+       #never logged in need a new session
+       return 1
     pre_date = get_last_login_date()
     date_now = datetime.date.today()
     return (date_now-pre_date).days
@@ -59,8 +59,11 @@ def get_last_access_token():
 
 def generate_session():
     if days_from_last_login() > 0: 
-       #generate new token if not logged in last 24 Hours
-       data = kite.generate_session(get_access_token(), api_secret=API_SECRET)
+       try:
+           #generate new token if not logged in last 24 Hours
+           data = kite.generate_session(get_access_token(), api_secret=API_SECRET)
+       except e:
+           logging.info("Not able to connect, Check input params and token passed")
        access_token = data["access_token"]
        record_login(access_token)
     else:
@@ -72,7 +75,8 @@ def generate_session():
 
 def main():
     generate_session()
-    
+    inputs = ip.get_inputs()
+    print(inputs)   
         
 
 if __name__ == "__main__":
