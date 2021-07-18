@@ -1,3 +1,4 @@
+import os
 import re
 import datetime
 import logging
@@ -9,6 +10,9 @@ from inputs.input_parser import InputParser
 
 
 
+logdir = "logs"
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
 logging.basicConfig(level=logging.DEBUG)
 
 
@@ -17,7 +21,7 @@ ip = InputParser()
 API_KEY = ip.get_apikey()
 API_SECRET = ip.get_apisecret()
 kite = KiteConnect(api_key=API_KEY)
-TOKEN_FILE = "/tmp/kite_token" 
+TOKEN_FILE = os.path.join(logdir,"kite_token")
 
 
 def get_access_token():
@@ -28,15 +32,14 @@ def get_access_token():
 
 def record_login(access_token):
     time_now = datetime.date.today()
-    fd = open(TOKEN_FILE,"w")
-    fd.write("{}:{}".format(time_now,access_token))
+    with open(TOKEN_FILE,"w") as fd:
+      fd.write(f"{time_now}:{access_token}")
 
 def get_last_login_date():
-    fd = open(TOKEN_FILE,"r")
-    data = fd.read()
+    with open(TOKEN_FILE,"r") as fd:
+       data = fd.read()
     pre_date = re.search("([\w\-]+)\:",data).group(1)
-    y,m,d = map(int,pre_date.split("-"))
-    return  datetime.date(y,m,d)
+    return  datetime.datetime.strptime(pre_date,"%Y-%m-%d").date()
 
 
 def days_from_last_login():
@@ -50,12 +53,12 @@ def days_from_last_login():
 
 def get_last_access_token():
     try:
-       fd = open(TOKEN_FILE,"r")
-       data = fd.read()
+       with open(TOKEN_FILE,"r") as fd:
+          data = fd.read()
        return re.search("\:(\w+)",data).group(1)
     except  e:
-       logging.info("{} file might be deleted or modified.\n"
-            "please do \"rm -f {}\" it and rerun".format(TOKEN_FILE,TOKEN_FILE)) 
+       logging.info(f"{TOKEN_FILE} file might be deleted or modified.\n"
+            "please do \"rm -f {TOKEN_FILE}\" it and rerun") 
 
 
 def generate_session():
