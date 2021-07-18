@@ -2,4 +2,11 @@ description: >
        Intraday Stradel without hedging with up to 2 adjustments
 classname: IntradayStradel
 script: .options.intraday_stradel.opt_intraday_stradel_strategy
-
+entry:
+    type: time
+    #use 24Hr format
+    time: "10:00"
+exit:
+    type: time
+    #use 24Hr format
+    time: "15:00"
