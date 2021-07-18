@@ -10,8 +10,15 @@
 ### Pre-requisites
   - python
   - kiteconnect api
+  ```
+     pip3 install --upgrade pip 
+     pip3 install kiteconnect      
+     pip3 install pathlib
+     pip3 install pyyaml
+     pip3 install logger
+  ```
   
 ### How to Start trade
    After editing kite inputs.yaml and strategy_inputs.yaml execute
    
-    > python start_trade.py
+    > python3 start_trade.py
