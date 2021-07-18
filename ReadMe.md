@@ -14,6 +14,8 @@
      pip install --upgrade pip 
      pip install kiteconnect      
      pip install pathlib
+     pip install pyyaml
+     pip install logger
   ```
   
 ### How to Start trade
