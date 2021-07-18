@@ -1,3 +1,5 @@
-class: IntradayStradel
-script: options/intraday_strade/opt_intraday_stradel_strategy.py
+description: >
+       Intraday Stradel without hedging with up to 2 adjustments
+classname: IntradayStradel
+script: .options.intraday_stradel.opt_intraday_stradel_strategy
 

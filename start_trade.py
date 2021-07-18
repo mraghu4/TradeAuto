@@ -2,6 +2,7 @@ import re
 import datetime
 import logging
 import datetime
+import importlib
 from pathlib import Path
 from kiteconnect import KiteConnect
 from inputs.input_parser import InputParser
@@ -76,7 +77,11 @@ def generate_session():
 def main():
     generate_session()
     inputs = ip.get_inputs()
-    print(inputs)   
+    strategy_mod = importlib.import_module(inputs.strategy.script,package='strategies')
+    strategy_class = getattr(strategy_mod,inputs.strategy.classname)
+    strategy = strategy_class()
+    strategy.start_trade(kite,inputs)
+
         
 
 if __name__ == "__main__":
