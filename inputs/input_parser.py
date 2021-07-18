@@ -15,6 +15,8 @@ class NestedNamespace(SimpleNamespace):
 class InputParser:
 
    input_yaml_file = "inputs.yaml"
+   # you might accept config file name/path as cmd line param instead ard, that way, you can play with other end-points or API keys.
+   # and, why dont you do this in constructor ?
    
    def __init__(self):
        with open(self.input_yaml_file,'r') as infile:
@@ -27,6 +29,7 @@ class InputParser:
              logging.debug("Inputs:{}".format(self.data))
           except yaml.YAMLError as e:
              print(e)
+             # you want to use logging.error
 
    def get_inputs(self):
        return self.data.inputs
