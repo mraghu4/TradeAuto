@@ -8,12 +8,14 @@ logging.basicConfig(level=logging.DEBUG)
 kite = KiteConnect(api_key="m84lyrd6ym1wsj58")
 print(kite.login_url())
 
-#data = kite.generate_session("iVkPZM8Z5FU03QU2HMd3a6ynk5G8cdv2", api_secret="r4oqcwqn4o8mi7fwez1rfampid88sj45")
-kite.set_access_token("2SRUWSVLg6wmIGAUB3m3JuB3SH9aXN1x")
+#data = kite.generate_session("U4N3vYQEX01bQCky5k5Y0rNFUm66SzRp", api_secret="vo3u61mppb2o7r6ler2ck7edh8z0grot")
+#kite.set_access_token(data["access_token"])
+kite.set_access_token("GUJ7NOH9IAykosWWNUdbNRJIV1enitRH")
 
 #print(data["access_token"])
 
 # Place an order
+"""
 try:
     order_id = kite.place_order(tradingsymbol="DODLA",
                                 exchange=kite.EXCHANGE_NSE,
@@ -26,7 +28,10 @@ try:
     logging.info("Order placed. ID is: {}".format(order_id))
 except Exception as e:
     logging.info("Order placement failed: {}".format(e.message))
-
+"""
 # Fetch all orders
-kite.orders()
+#print(kite.holdings())
+print(kite.quote('NSE:NIFTY BANK')["NSE:NIFTY BANK"]["last_price"])
+print(kite.quote('NFO:BANKNIFTY21JUL35500PE'))
+print(kite.quote('NFO:BANKNIFTY2172235000CE'))
 

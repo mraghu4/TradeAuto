@@ -15,7 +15,7 @@ class IntradayStradel():
       instrument = None
       inputs = None
 
-      def print_description():
+      def print_description(self):
           logging.info(self.inputs.strategy.description)
 
       def wait_till_time(self,entry_time):
@@ -33,8 +33,20 @@ class IntradayStradel():
           else:
               return False
 
-      def trade_stradel():
-          #TODO
+      def get_security_price(self,security):
+          return kite.quote(security)[security]["last_price"]
+
+      def get_closer_options(security,security_price,gap):
+          #TODO 
+    
+
+      def trade_stradel(slef):
+          security = self.inputs.strategy.security
+          security_price = self.get_security_price(security)
+          security_option_gap = self.inputs.strategy.opt_gap
+          put,call = self.get_closer_options(security,
+                        security_price,security_option_gap)
+
           return None
 
       def watch_adjust_or_exit():
@@ -52,6 +64,7 @@ class IntradayStradel():
       def start_trade(self,kite,inputs):
           self.kite = kite
           self.inputs = inputs
+          slef.print_description()
           self.execute_strategy() 
 
 
