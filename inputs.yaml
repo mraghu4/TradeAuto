@@ -2,7 +2,7 @@ inputs:
   cash: 200000
   session:
     api_key: "m84lyrd6ym1wsj58"
-    api_secret: "vo3u61mppb2o7r6ler2ck7edh8z0grot"
+    api_secret: "********"
   strategy:
     name: intra_day_stradel_01
     stoploss: 40
