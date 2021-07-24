@@ -2,22 +2,22 @@ inputs:
   cash: 200000
   session:
     api_key: "m84lyrd6ym1wsj58"
-    api_secrete: ""
+    api_secret: "xxxxx" 
   strategy:
     name: intra_day_stradel_01
     security: "NSE:NIFTY BANK"
     #22nd jul 2021 expiry Banknifty option can be given as below
-    opt_name: BANKNIFTY
+    opt_name: "NFO:BANKNIFTY"
     opt_year: 21
-    opt_month: 7
-    opt_day: 22
+    opt_month: 8
+    opt_day: "05"
     #Monthly expirty option format will be...
     #opt_name: BANKNIFTY
     #opt_year: 21
     #opt_month: JUL
     #opt_day: None
     #option_gap is gap between 2 consecutive contracts
-    #  it is 100 for banknifty, 50 for nifty and 20 for some other stocks etc.
+    #  it is 100 for banknifty, 50 for nifty and 20 to 5 for some other stocks etc.
     opt_gap: 100
     stoploss: 40
     target: 10

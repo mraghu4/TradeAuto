@@ -34,22 +34,39 @@ class IntradayStradel():
               return False
 
       def get_security_price(self,security):
-          return kite.quote(security)[security]["last_price"]
+          return self.kite.quote(security)[security]["last_price"]
 
-      def get_closer_options(security,security_price,gap):
-          #TODO 
+      def get_near_options(self,security_price,gap):
+          near_price=round(security_price/gap)*gap
+          near_ce=(f"{self.inputs.strategy.opt_name}"
+                   f"{self.inputs.strategy.opt_year}"
+                   f"{self.inputs.strategy.opt_month}"
+                   f"{self.inputs.strategy.opt_day}"
+                   f"{near_price}"
+                   "CE")
+          near_pe=(f"{self.inputs.strategy.opt_name}"
+                   f"{self.inputs.strategy.opt_year}"
+                   f"{self.inputs.strategy.opt_month}"
+                   f"{self.inputs.strategy.opt_day}"
+                   f"{near_price}"
+                   "PE")
+          return near_ce,near_pe
     
 
-      def trade_stradel(slef):
+      def trade_stradel(self):
           security = self.inputs.strategy.security
           security_price = self.get_security_price(security)
           security_option_gap = self.inputs.strategy.opt_gap
-          put,call = self.get_closer_options(security,
-                        security_price,security_option_gap)
+          call,put = self.get_near_options(security_price,security_option_gap)
+          logging.info(f"Stradel start with {call} and {put}")
+          call_price = self.kite.quote(f"{call}")[call]["last_price"]
+          put_price = self.kite.quote(f"{put}")[put]["last_price"]
+          logging.info(f"Selling {call} at {call_price}")
+          logging.info(f"Selling {put} at {put_price}")
 
           return None
 
-      def watch_adjust_or_exit():
+      def watch_adjust_or_exit(self):
           #TODO
           return None
 
@@ -64,7 +81,7 @@ class IntradayStradel():
       def start_trade(self,kite,inputs):
           self.kite = kite
           self.inputs = inputs
-          slef.print_description()
+          self.print_description()
           self.execute_strategy() 
 
 
