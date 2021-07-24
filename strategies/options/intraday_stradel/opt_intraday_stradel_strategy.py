@@ -58,6 +58,7 @@ class IntradayStradel():
       def trade_stradel(self):
           security = self.inputs.strategy.security
           security_price = self.get_security_price(security)
+          self.start_price = security_price
           security_option_gap = self.inputs.strategy.opt_gap
           call,put = self.get_near_options(security_price,security_option_gap)
           logging.info(f"Stradel start with {call} and {put}")
