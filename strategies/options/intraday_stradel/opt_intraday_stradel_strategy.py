@@ -14,6 +14,8 @@ class IntradayStradel():
       kite = None
       instrument = None
       inputs = None
+      calls = []
+      puts  = []
 
       def print_description(self):
           logging.info(self.inputs.strategy.description)
@@ -63,11 +65,64 @@ class IntradayStradel():
           put_price = self.kite.quote(f"{put}")[put]["last_price"]
           logging.info(f"Selling {call} at {call_price}")
           logging.info(f"Selling {put} at {put_price}")
-
+          self.calls.append(call)
+          self.puts.append(put)
+          self.level = 0
           return None
 
-      def watch_adjust_or_exit(self):
+      def buy_put(self,price):
           #TODO
+          return None
+
+      def buy_call(self,price):
+          #TODO
+          return None
+
+
+      def _check_and_add_options():
+          call_price = 0
+          put_price  = 0 
+          for c in self.calls:
+              call_price = call_price + self.kite.quote(f"{c}")[c]["last_price"]
+          for p in self.puts:
+              put_price = put_price + self.kite.quote(f"{p}")[p]["last_price"]
+          if call_price/2 > put_price :
+              #call is double to put.
+              #adjust with put which is 1/4th price of call
+              self.buy_put(call_price/4)
+              self.level = self.level + 1
+          if put_price/2 > call_price:
+              #put is double to put.
+              #adjust with call which is 1/4th price of put
+              self.buy_call(put_price/4)
+              self.level = self.level + 1
+
+      def check_stop_loss_exit():
+          if self.stop_loss_hit():
+             self.exit_strategy()
+          else:
+             self.check_and_remove_options()
+
+      def check_and_remove_options():
+          call_price = 0
+          put_price  = 0
+          for c in self.calls:
+              call_price = call_price + self.kite.quote(f"{c}")[c]["last_price"]
+          for p in self.puts:
+              put_price = put_price + self.kite.quote(f"{p}")[p]["last_price"]
+          
+
+      def check_and_adjust(self):
+          if self.level < 2 :
+              self.check_and_add_options()
+          else:
+              self.check_stop_loss_exit()
+
+      def watch_adjust_or_exit(self):
+          while True:
+              self.check_and_adjust()
+              time.sleep(1)
+
           return None
 
 

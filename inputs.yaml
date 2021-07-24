@@ -2,7 +2,7 @@ inputs:
   cash: 200000
   session:
     api_key: "m84lyrd6ym1wsj58"
-    api_secret: "xxxxx" 
+    api_secret: "xxxx" 
   strategy:
     name: intra_day_stradel_01
     security: "NSE:NIFTY BANK"
