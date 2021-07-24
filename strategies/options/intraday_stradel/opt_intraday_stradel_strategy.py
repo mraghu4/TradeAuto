@@ -66,16 +66,45 @@ class IntradayStradel():
           put_price = self.kite.quote(f"{put}")[put]["last_price"]
           logging.info(f"Selling {call} at {call_price}")
           logging.info(f"Selling {put} at {put_price}")
+          #TODO 
           self.calls.append(call)
           self.puts.append(put)
           self.level = 0
           return None
 
+      def price_opt_pair(key):
+          return dict({key:abs(price - opt_chain[key]["last_price"])})
+
+      def get_security_near_price(price,opt_type):
+          opt_list = []
+          opt_dict = {}
+          start = self.price - (RANGE_MULTIPLIER * self.inputs.strategy.opt_gap)
+          end = self.price + (RANGE_MULTIPLIER * self.inputs.strategy.opt_gap)
+          for val in range(start,end,self.inputs.strategy.opt_gap):
+              opt_list.append(f"{self.inputs.strategy.opt_name}"
+                             f"{self.inputs.strategy.opt_year}"
+                             f"{self.inputs.strategy.opt_month}"
+                             f"{self.inputs.strategy.opt_day}"
+                             f"{val}{opt_type}")
+          opt_chain = kite.quote(opt_list)
+          opt_price_lst = list(map(price_opt_pair,opt_list))
+          for item in opt_price_lst:
+              opt_dict.update(item)
+          return min(opt_dict,key=opt_dict.get)
+
+
+
       def buy_put(self,price):
-          #TODO
+          security = self.get_security_near_price(price,"PE")
+          price = self.kite.quote(f"{security}")[security]["last_price"]
+          logging.info(f"Selling {security} at {price}")
+          #TODO 
           return None
 
       def buy_call(self,price):
+          security = self.get_security_near_price(price,"CE")
+          price = self.kite.quote(f"{security}")[security]["last_price"]
+          logging.info(f"Selling {security} at {price}")
           #TODO
           return None
 
