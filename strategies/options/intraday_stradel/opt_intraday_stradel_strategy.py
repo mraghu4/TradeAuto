@@ -16,6 +16,7 @@ class IntradayStradel():
       inputs = None
       calls = []
       puts  = []
+      positions = []
 
       def print_description(self):
           logging.info(self.inputs.strategy.description)
@@ -31,7 +32,8 @@ class IntradayStradel():
           if (datetime.now().time() >=
                   datetime.strptime(exit_time,'%H:%M').time()):
               logging.info("Current time beyond stragtegy exit time")
-              exit(exitcode.EXIT_TIME_TRIGGER)
+              self.close_all_positions()
+              exit(exitcode.EXIT_TIMETRIGGER)
           else:
               return False
 
@@ -66,7 +68,7 @@ class IntradayStradel():
           put_price = self.kite.quote(f"{put}")[put]["last_price"]
           logging.info(f"Selling {call} at {call_price}")
           logging.info(f"Selling {put} at {put_price}")
-          #TODO 
+          #TODO add sell trades 
           self.calls.append(call)
           self.puts.append(put)
           self.level = 0
@@ -94,22 +96,24 @@ class IntradayStradel():
 
 
 
-      def buy_put(self,price):
+      def sell_put(self,price):
           security = self.get_security_near_price(price,"PE")
           price = self.kite.quote(f"{security}")[security]["last_price"]
           logging.info(f"Selling {security} at {price}")
-          #TODO 
+          #TODO sell code
+          self.positions.append(security)
           return None
 
-      def buy_call(self,price):
+      def sell_call(self,price):
           security = self.get_security_near_price(price,"CE")
           price = self.kite.quote(f"{security}")[security]["last_price"]
           logging.info(f"Selling {security} at {price}")
-          #TODO
+          #TODO sell code
+          self.positions.append(security)
           return None
 
 
-      def _check_and_add_options():
+      def check_and_add_options(self):
           call_price = 0
           put_price  = 0 
           for c in self.calls:
@@ -119,17 +123,22 @@ class IntradayStradel():
           if call_price/2 > put_price :
               #call is double to put.
               #adjust with put which is 1/4th price of call
-              self.buy_put(call_price/4)
+              self.sell_put(call_price/4)
               self.level = self.level + 1
           if put_price/2 > call_price:
               #put is double to put.
               #adjust with call which is 1/4th price of put
-              self.buy_call(put_price/4)
+              self.sell_call(put_price/4)
               self.level = self.level + 1
 
-      def check_stop_loss_exit():
+      def close_all_positions(self):
+          for p in self.positions:
+              p_price = self.kite.quote(f"{p}")[p]["last_price"]
+              logging.info(f"exiting {p} at price {p_price}")
+
+      def check_stop_loss_exit(self):
           if self.stop_loss_hit():
-             self.exit_strategy()
+             self.close_all_positions()
           else:
              self.check_and_remove_options()
 
@@ -143,6 +152,7 @@ class IntradayStradel():
           
 
       def check_and_adjust(self):
+          self.check_exit_time(self.inputs.strategy.exit.time)
           if self.level < 2 :
               self.check_and_add_options()
           else:
@@ -150,8 +160,12 @@ class IntradayStradel():
 
       def watch_adjust_or_exit(self):
           while True:
-              self.check_and_adjust()
-              time.sleep(1)
+              try:
+                self.check_and_adjust()
+                time.sleep(1)
+              except:
+                logging.info("Exception occured")
+                pass
 
           return None
 
