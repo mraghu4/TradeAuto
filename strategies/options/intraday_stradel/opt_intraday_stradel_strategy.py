@@ -1,7 +1,7 @@
 import time
 import logging
 from datetime import datetime
-import strategies.exitcodes as exitcode
+import strategies.exitcodes as exitcodes
 
 """
    Description:
@@ -17,6 +17,7 @@ class IntradayStradel():
       calls = []
       puts  = []
       positions = []
+      exit_flag = None
 
       def print_description(self):
           logging.info(self.inputs.strategy.description)
@@ -33,7 +34,8 @@ class IntradayStradel():
                   datetime.strptime(exit_time,'%H:%M').time()):
               logging.info("Current time beyond stragtegy exit time")
               self.close_all_positions()
-              exit(exitcode.EXIT_TIMETRIGGER)
+              self.exit_flag = exitcodes.EXIT_TIMETRIGGER
+              return True
           else:
               return False
 
@@ -135,10 +137,12 @@ class IntradayStradel():
           for p in self.positions:
               p_price = self.kite.quote(f"{p}")[p]["last_price"]
               logging.info(f"exiting {p} at price {p_price}")
+          logging.info("Closed all positions")
 
       def check_stop_loss_exit(self):
           if self.stop_loss_hit():
              self.close_all_positions()
+             self.exit_flag = exitcodes.EXIT_STOPLOSS
           else:
              self.check_and_remove_options()
 
@@ -149,9 +153,13 @@ class IntradayStradel():
               call_price = call_price + self.kite.quote(f"{c}")[c]["last_price"]
           for p in self.puts:
               put_price = put_price + self.kite.quote(f"{p}")[p]["last_price"]
-          
+
+      def check_target_hit_exit(self):
+          #TODO check target hit and exit
+          pass    
 
       def check_and_adjust(self):
+          self.check_target_hit_exit()
           self.check_exit_time(self.inputs.strategy.exit.time)
           if self.level < 2 :
               self.check_and_add_options()
@@ -160,19 +168,19 @@ class IntradayStradel():
 
       def watch_adjust_or_exit(self):
           while True:
+              if self.exit_flag :
+                  exit(self.exit_flag)
               try:
                 self.check_and_adjust()
                 time.sleep(1)
               except:
                 logging.info("Exception occured")
-                pass
-
-          return None
-
+              
 
       def execute_strategy(self):
           if self.inputs.strategy.entry.type == "time":
-              self.check_exit_time(self.inputs.strategy.exit.time)
+              if self.check_exit_time(self.inputs.strategy.exit.time):
+                 exit(exitcodes.EXIT_TIMETRIGGER)
               self.wait_till_time(self.inputs.strategy.entry.time)
           self.trade_stradel()
           self.watch_adjust_or_exit()

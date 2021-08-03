@@ -1,29 +1,37 @@
 import os
 import re
 import datetime
+import time
 import logging
-import datetime
 import importlib
 from pathlib import Path
 from kiteconnect import KiteConnect
 from inputs.input_parser import InputParser
 
 
-
+#set logging
 logdir = "logs"
 if not os.path.exists(logdir):
     os.makedirs(logdir)
-logging.basicConfig(level=logging.DEBUG)
+file_name = f"log_{time.strftime('%Y%m%d-%H%M%S')}"
+logfile = os.path.join(logdir,file_name)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] : %(message)s",
+    handlers=[
+        logging.FileHandler(logfile),
+        logging.StreamHandler()
+    ]
+)
 
-
-
+#Variables
 ip = InputParser()
 API_KEY = ip.get_apikey()
 API_SECRET = ip.get_apisecret()
 kite = KiteConnect(api_key=API_KEY)
 TOKEN_FILE = os.path.join(logdir,"kite_token")
 
-
+#definitions
 def get_access_token():
     logging.info("Copy {} , login and"
        " provide access token".format(kite.login_url()))
