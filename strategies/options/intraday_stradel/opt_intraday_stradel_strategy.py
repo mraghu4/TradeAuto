@@ -73,13 +73,15 @@ class IntradayStradel():
           #TODO add sell trades 
           self.calls.append(call)
           self.puts.append(put)
+          self.positions.append(call)
+          self.positions.append(put)
           self.level = 0
           return None
 
       def price_opt_pair(key):
           return dict({key:abs(price - opt_chain[key]["last_price"])})
 
-      def get_security_near_price(price,opt_type):
+      def get_security_near_price(self,price,opt_type):
           opt_list = []
           opt_dict = {}
           start = self.price - (RANGE_MULTIPLIER * self.inputs.strategy.opt_gap)
@@ -173,8 +175,8 @@ class IntradayStradel():
               try:
                 self.check_and_adjust()
                 time.sleep(1)
-              except:
-                logging.info("Exception occured")
+              except Exception as e:
+                logging.info(f"Exception occuredi{e}")
               
 
       def execute_strategy(self):
