@@ -16,7 +16,7 @@ if not os.path.exists(logdir):
 file_name = f"log_{time.strftime('%Y%m%d-%H%M%S')}"
 logfile = os.path.join(logdir,file_name)
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] : %(message)s",
     handlers=[
         logging.FileHandler(logfile),
