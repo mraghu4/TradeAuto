@@ -4,10 +4,17 @@ import datetime
 import time
 import logging
 import importlib
+import sys
 from pathlib import Path
 from kiteconnect import KiteConnect
 from inputs.input_parser import InputParser
 
+#arugments
+if "-d" in sys.argv:
+   log_level = logging.DEBUG
+else:
+   log_level = logging.INFO
+  
 
 #set logging
 logdir = "logs"
@@ -16,7 +23,7 @@ if not os.path.exists(logdir):
 file_name = f"log_{time.strftime('%Y%m%d-%H%M%S')}"
 logfile = os.path.join(logdir,file_name)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=log_level,
     format="%(asctime)s [%(levelname)s] : %(message)s",
     handlers=[
         logging.FileHandler(logfile),

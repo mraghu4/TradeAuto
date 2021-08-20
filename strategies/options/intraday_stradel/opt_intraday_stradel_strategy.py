@@ -100,9 +100,14 @@ class IntradayStradel():
               opt_dict.update(item)
           return min(opt_dict,key=opt_dict.get)
 
-
+      def quote_security(self):
+          main_security = self.inputs.strategy.security
+          main_security_price = self.get_security_price(security)
+          logging.info(f"{main_security} is now at {main_security_price}")
+          
 
       def sell_put(self,price):
+          self.quote_security()
           security = self.get_security_near_price(price,"PE")
           price = self.kite.quote(f"{security}")[security]["last_price"]
           logging.info(f"Selling {security} at {price}")
@@ -111,6 +116,7 @@ class IntradayStradel():
           return None
 
       def sell_call(self,price):
+          self.quote_security()
           security = self.get_security_near_price(price,"CE")
           price = self.kite.quote(f"{security}")[security]["last_price"]
           logging.info(f"Selling {security} at {price}")
@@ -118,6 +124,10 @@ class IntradayStradel():
           self.positions.append(security)
           return None
 
+      def buy_security(self,security):
+          price = self.kite.quote(f"{security}")[security]["last_price"]
+          logging.info(f"Buying {security} at {price}")
+          #TODO buy market order
 
       def check_and_add_options(self):
           call_price = 0
@@ -142,7 +152,7 @@ class IntradayStradel():
       def close_all_positions(self):
           for p in self.positions:
               p_price = self.kite.quote(f"{p}")[p]["last_price"]
-              logging.info(f"exiting {p} at price {p_price}")
+              self.buy_security(p)
           logging.info("Closed all positions")
 
       def stop_loss_hit(self):
@@ -163,6 +173,7 @@ class IntradayStradel():
               call_price = call_price + self.kite.quote(f"{c}")[c]["last_price"]
           for p in self.puts:
               put_price = put_price + self.kite.quote(f"{p}")[p]["last_price"]
+          #TODO check and remvoe options
 
       def check_target_hit_exit(self):
           #TODO check target hit and exit
