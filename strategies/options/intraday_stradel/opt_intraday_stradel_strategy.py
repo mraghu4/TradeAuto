@@ -1,6 +1,7 @@
 import time
 import logging
 import traceback
+import pandas as pd
 from datetime import datetime
 import strategies.exitcodes as exitcodes
 """
@@ -59,6 +60,12 @@ class IntradayStradel():
                    f"{near_price}"
                    "PE")
           return near_ce,near_pe
+
+      def get_avg_price_of_order(order_id):
+          orders = kite.orders()
+          for order in orders:
+              if order['order_id'] == order_id:
+                 return order['average_price']
     
 
       def trade_stradel(self):
@@ -71,7 +78,8 @@ class IntradayStradel():
           put_price = self.kite.quote(f"{put}")[put]["last_price"]
           logging.info(f"Selling {call} at {call_price}")
           logging.info(f"Selling {put} at {put_price}")
-          #TODO add sell trades 
+          self.sell_security(call)
+          self.sell_security(put)
           self.calls.append(call)
           self.puts.append(put)
           self.positions.append(call)
@@ -102,32 +110,102 @@ class IntradayStradel():
 
       def quote_security(self):
           main_security = self.inputs.strategy.security
-          main_security_price = self.get_security_price(security)
+          main_security_price = self.get_security_price(main_security)
           logging.info(f"{main_security} is now at {main_security_price}")
           
 
       def sell_put(self,price):
           self.quote_security()
           security = self.get_security_near_price(price,"PE")
-          price = self.kite.quote(f"{security}")[security]["last_price"]
-          logging.info(f"Selling {security} at {price}")
-          #TODO sell code
+          if self.inputs.realtrade:
+            try:
+                order_id = kite.place_order(tradingsymbol=security,
+                                exchange=kite.EXCHANGE_NFO,
+                                transaction_type=kite.TRANSACTION_TYPE_SELL,
+                                quantity=self.inputs.strategy.lotsize,
+                                variety=kite.VARIETY_REGULAR,
+                                order_type=kite.ORDER_TYPE_MARKET,
+                                product=kite.PRODUCT_DAY)
+                avg_price = self.get_avg_price_of_order(order_id) 
+                logging.info(f"Sold {security} at price {avg_price}"
+                             f" and quantity {self.inputs.strategy.lotsize}")
+            except Exception as e:
+                logging.info(f"Order placement failed: {e.message}")
+          else:
+            price = self.kite.quote(f"{security}")[security]["last_price"]
+            logging.info(f"Sold {security} at price {price}") 
           self.positions.append(security)
+          self.puts.append(security)
           return None
 
       def sell_call(self,price):
           self.quote_security()
           security = self.get_security_near_price(price,"CE")
           price = self.kite.quote(f"{security}")[security]["last_price"]
-          logging.info(f"Selling {security} at {price}")
-          #TODO sell code
+          if self.inputs.realtrade:
+            try:
+                order_id = kite.place_order(tradingsymbol=security,
+                                exchange=kite.EXCHANGE_NFO,
+                                transaction_type=kite.TRANSACTION_TYPE_SELL,
+                                quantity=self.inputs.strategy.lotsize,
+                                variety=kite.VARIETY_REGULAR,
+                                order_type=kite.ORDER_TYPE_MARKET,
+                                product=kite.PRODUCT_DAY)
+                avg_price = self.get_avg_price_of_order(order_id) 
+                logging.info(f"Sold {security} at price {avg_price}"
+                             f" and quantity {self.inputs.strategy.lotsize}")
+            except Exception as e:
+               logging.info(f"Order placement failed: {e.message}")
+          else:
+            price = self.kite.quote(f"{security}")[security]["last_price"]
+            logging.info(f"Sold {security} at price {price}") 
           self.positions.append(security)
+          self.calls.append(security)
           return None
 
-      def buy_security(self,security):
+      def sell_security(self,security):
+          self.quote_security()
           price = self.kite.quote(f"{security}")[security]["last_price"]
-          logging.info(f"Buying {security} at {price}")
-          #TODO buy market order
+          if self.inputs.realtrade:
+            try:
+                order_id = kite.place_order(tradingsymbol=security,
+                                exchange=kite.EXCHANGE_NFO,
+                                transaction_type=kite.TRANSACTION_TYPE_SELL,
+                                quantity=self.inputs.strategy.lotsize,
+                                variety=kite.VARIETY_REGULAR,
+                                order_type=kite.ORDER_TYPE_MARKET,
+                                product=kite.PRODUCT_DAY)
+                avg_price = self.get_avg_price_of_order(order_id) 
+                logging.info(f"Sold {security} at price {avg_price}"
+                             f" and quantity {self.inputs.strategy.lotsize}")
+            except Exception as e:
+                logging.info(f"Order placement failed: {e.message}")
+          else:
+            price = self.kite.quote(f"{security}")[security]["last_price"]
+            logging.info(f"Sold {security} at price {price}") 
+
+
+      def buy_security(self,security):
+          self.quote_security()
+          price = self.kite.quote(f"{security}")[security]["last_price"]
+          if self.inputs.realtrade:
+            try:
+                order_id = kite.place_order(tradingsymbol=security,
+                                exchange=kite.EXCHANGE_NFO,
+                                transaction_type=kite.TRANSACTION_TYPE_BUY,
+                                quantity=self.inputs.strategy.lotsize,
+                                variety=kite.VARIETY_REGULAR,
+                                order_type=kite.ORDER_TYPE_MARKET,
+                                product=kite.PRODUCT_DAY)
+                avg_price = self.get_avg_price_of_order(order_id) 
+                logging.info(f"Bought {security} at price {avg_price}"
+                             f" and quantity {self.inputs.strategy.lotsize}")
+            except Exception as e:
+                logging.info(f"Order placement failed: {e.message}")
+          else:
+            price = self.kite.quote(f"{security}")[security]["last_price"]
+            logging.info(f"Bought {security} at price {price}") 
+
 
       def check_and_add_options(self):
           call_price = 0
@@ -166,6 +244,14 @@ class IntradayStradel():
           else:
              self.check_and_remove_options()
 
+      def exit_put_with_low_price(self):
+          #TODO
+          pass
+ 
+      def exit_call_with_low_price(self):
+          #TODO
+          pass
+
       def check_and_remove_options(self):
           call_price = 0
           put_price  = 0
@@ -173,11 +259,13 @@ class IntradayStradel():
               call_price = call_price + self.kite.quote(f"{c}")[c]["last_price"]
           for p in self.puts:
               put_price = put_price + self.kite.quote(f"{p}")[p]["last_price"]
-          #TODO check and remvoe options
+          if call_price <= put_price and len(self.puts) > 1:
+             self.exit_put_with_low_price()
+          if call_price >= put_price and len(self.calls) > 1:
+             self.exit_call_with_low_price()
 
       def check_target_hit_exit(self):
-          #TODO check target hit and exit
-          pass    
+          pass 
 
       def check_and_adjust(self):
           self.check_target_hit_exit()
