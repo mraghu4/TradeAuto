@@ -8,6 +8,14 @@ import strategies.exitcodes as exitcodes
    Description:
    Params:
 
+   Done:
+        1) stradle with adjustments
+        2) exit on stoploss or target hit
+        3) enter and exit based on time
+        4) final trade report
+   TODO:
+        1) Continue trade which closed due to program exit
+
 """
 
 
@@ -219,18 +227,28 @@ class IntradayStradel():
               #adjust with call which is 1/4th price of put
               self.sell_call(put_price/4)
               self.level = self.level + 1
-         
+
+      def generate_report(self):
+          if len(self.positions) == 0:
+             return 
+          share_PnL = self.odf["Entry"].sum() - self.odf["Exit"].sum()
+          total_PnL = share_PnL * self.inputs.strategy.lotsize
+          logging.info(odf)
+          logging.info(f"Total Profit/Loss: {total_PnL}")
 
       def close_all_positions(self):
           for p in self.positions:
               self.buy_security(p)
           logging.info("Closed all positions")
+          self.generate_report()
 
       def stop_loss_hit(self):
           total_current_val = 0 
           for p in self.positions:
-             total_current_val = total_current_val + self.kite.quote(f"{p}")[p]["last_price"]
-          lossp = (total_current_val - self.TOTAL_ENTRY_VAL)/self.TOTAL_ENTRY_VAL * 100
+             total_current_val = (total_current_val +
+                                 self.kite.quote(f"{p}")[p]["last_price"])
+          lossp = ((total_current_val - self.TOTAL_ENTRY_VAL) / 
+                   self.TOTAL_ENTRY_VAL * 100)
           if lossp > self.inputs.strategy.stoploss:
              return True
           return False

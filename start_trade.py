@@ -9,6 +9,8 @@ from pathlib import Path
 from kiteconnect import KiteConnect
 from inputs.input_parser import InputParser
 
+
+
 #arugments
 if "-d" in sys.argv:
    log_level = logging.DEBUG
@@ -100,7 +102,7 @@ def main():
     strategy = strategy_class()
     strategy.start_trade(kite,inputs)
 
-        
+#TODO check and continue previous trade if it exited due to connecitivity issues        
 
 if __name__ == "__main__":
     main()
