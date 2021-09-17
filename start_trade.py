@@ -71,7 +71,7 @@ def get_last_access_token():
        with open(TOKEN_FILE,"r") as fd:
           data = fd.read()
        return re.search("\:(\w+)",data).group(1)
-    except  e:
+    except Exception as e:
        logging.info(f"{TOKEN_FILE} file might be deleted or modified.\n"
             "please do \"rm -f {TOKEN_FILE}\" it and rerun") 
 
@@ -81,7 +81,7 @@ def generate_session():
        try:
            #generate new token if not logged in last 24 Hours
            data = kite.generate_session(get_access_token(), api_secret=API_SECRET)
-       except e:
+       except Exception as e:
            logging.info("Not able to connect, Check input params and token passed")
        access_token = data["access_token"]
        record_login(access_token)
