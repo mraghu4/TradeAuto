@@ -72,16 +72,23 @@ class IntradayStradel():
                  return order['average_price']
 
       def record_trade(self,option,price,trade_type):
-          self.positions.append(option)
           if option.endswith("CE"):
              opt_type = "CE"
-             self.calls.append(option)
+             if trade_type ==  "Entry":
+                self.calls.append(option)
+             else:
+                self.calls.remove(option)
           elif option.endswith("PE"):
              opt_type = "PE"
              self.puts.append(option)
+             if trade_type ==  "Entry":
+                self.calls.append(option)
+             else:
+                self.calls.remove(option)
           time_now = datetime.now()
           security,security_price = self.quote_security()
           if trade_type ==  "Entry":
+             self.positions.append(option)
              self.odf = self.odf.append({"Type":opt_type,
                                "Option":option,
                                "Entry":price,
@@ -89,9 +96,13 @@ class IntradayStradel():
                                "Security at Entry": security_price},
                                ignore_index=True)
           else:
+             self.positions.remove(option)
              self.odf.loc[self.odf.Option == option,
                  ["Exit","Exit Time","Security at Exit"]] = [price,time_now,security_price]
-          logging.info(odf)    
+          logging.info(f"Data Frame:\n{self.odf}")
+          logging.info(f"CALLS :\n{self.calls}")
+          logging.info(f"PUTS :\n{self.puts}")
+          logging.info(f"POSTIONS :\n{self.positions}")
  
            
       def trade_stradel(self):
@@ -100,8 +111,8 @@ class IntradayStradel():
           security_option_gap = self.inputs.strategy.opt_gap
           call,put = self.get_near_options(security_price,security_option_gap)
           logging.info(f"Stradel start with {call} and {put}")
-          self.sell_security(call,"CE")
-          self.sell_security(put,"PE")
+          self.sell_security(call)
+          self.sell_security(put)
           self.level = 0
           return None
 
@@ -136,16 +147,16 @@ class IntradayStradel():
       def sell_put(self,price):
           self.quote_security()
           security = self.get_security_near_price(price,"PE")
-          self.sell_security(security,"PE")
+          self.sell_security(security)
           return None
 
       def sell_call(self,price):
           self.quote_security()
           security = self.get_security_near_price(price,"CE")
-          self.sell_security(security,"CE")
+          self.sell_security(security)
           return None
 
-      def sell_security(self,security,security_type):
+      def sell_security(self,security):
           self.quote_security()
           price = 0
           if self.inputs.realtrade:
@@ -208,6 +219,7 @@ class IntradayStradel():
               #adjust with call which is 1/4th price of put
               self.sell_call(put_price/4)
               self.level = self.level + 1
+         
 
       def close_all_positions(self):
           for p in self.positions:
@@ -215,23 +227,43 @@ class IntradayStradel():
           logging.info("Closed all positions")
 
       def stop_loss_hit(self):
-          #TODO 
+          total_current_val = 0 
+          for p in self.positions:
+             total_current_val = total_current_val + self.kite.quote(f"{p}")[p]["last_price"]
+          lossp = (total_current_val - self.TOTAL_ENTRY_VAL)/self.TOTAL_ENTRY_VAL * 100
+          if lossp > self.inputs.strategy.stoploss:
+             return True
           return False
+          
 
       def check_stop_loss_exit(self):
+          if self.TOTAL_ENTRY_VAL == 0:
+               self.TOTAL_ENTRY_VAL = self.odf["Entry"].sum()
           if self.stop_loss_hit():
-             self.close_all_positions()
-             self.exit_flag = exitcodes.EXIT_STOPLOSS
+               self.close_all_positions()
+               self.exit_flag = exitcodes.EXIT_STOPLOSS
           else:
-             self.check_and_remove_options()
+               self.check_and_remove_options()
 
       def exit_put_with_low_price(self):
-          #TODO
-          pass
+          p = self.puts[0]
+          min_put = self.kite.quote(f"{p}")[p]["last_price"]
+          for p in self.puts:
+             price = self.kite.quote(f"{p}")[p]["last_price"]
+             if price < min_price:
+                  min_put = p
+          self.buy_security(min_put)
+          
  
       def exit_call_with_low_price(self):
-          #TODO
-          pass
+          c = self.calls[0]
+          min_call = self.kite.quote(f"{c}")[c]["last_price"]
+          for c in self.calls:
+             price = self.kite.quote(f"{c}")[c]["last_price"]
+             if price < min_price:
+                  min_call= c
+          self.buy_security(min_call)
+ 
 
       def check_and_remove_options(self):
           call_price = 0
@@ -246,8 +278,15 @@ class IntradayStradel():
              self.exit_call_with_low_price()
 
       def check_target_hit_exit(self):
-          #TODO
-          pass 
+          total_entry_val = self.odf["Entry"].sum()
+          total_current_val = 0
+          for p in self.positions:
+             total_current_val = total_current_val + self.kite.quote(f"{p}")[p]["last_price"]
+          profitp = (total_current_val - self.total_entry_val)/self.total_entry_val * 100
+          if profitp > self.inputs.strategy.target:
+             return True
+          return False
+          
 
       def check_and_adjust(self):
           self.check_target_hit_exit()
