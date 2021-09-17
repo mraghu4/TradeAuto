@@ -20,7 +20,9 @@ class IntradayStradel():
       positions = []
       exit_flag = None
       data = []
-      columns = ["Type","Option","Entry","Entry Time","Exit","Exit Time"]
+      columns = ["Type","Option",
+                 "Entry Price","Entry Time","Security at Entry",
+                 "Exit Price","Exit Time","Security at Exit"]
       RANGE_MULTIPLIER = 12
 
       def print_description(self):
@@ -69,13 +71,29 @@ class IntradayStradel():
               if order['order_id'] == order_id:
                  return order['average_price']
 
-      def record_trade(self,option,opt_type):
+      def record_trade(self,option,price,trade_type):
           self.positions.append(option)
-          if opt_type == "CE":
+          if option.endswith("CE"):
+             opt_type = "CE"
              self.calls.append(option)
-          else:
+          elif option.endswith("PE"):
+             opt_type = "PE"
              self.puts.append(option)
-
+          time_now = datetime.now()
+          security,security_price = self.quote_security()
+          if trade_type ==  "Entry":
+             self.odf = self.odf.append({"Type":opt_type,
+                               "Option":option,
+                               "Entry":price,
+                               "Entry Time":time_now,
+                               "Security at Entry": security_price},
+                               ignore_index=True)
+          else:
+             self.odf.loc[self.odf.Option == option,
+                 ["Exit","Exit Time","Security at Exit"]] = [price,time_now,security_price]
+          logging.info(odf)    
+ 
+           
       def trade_stradel(self):
           security = self.inputs.strategy.security
           security_price = self.get_security_price(security)
@@ -112,6 +130,7 @@ class IntradayStradel():
           main_security = self.inputs.strategy.security
           main_security_price = self.get_security_price(main_security)
           logging.info(f"{main_security} is now at {main_security_price}")
+          return main_security,main_security_price
           
 
       def sell_put(self,price):
@@ -128,7 +147,7 @@ class IntradayStradel():
 
       def sell_security(self,security,security_type):
           self.quote_security()
-          price = self.kite.quote(f"{security}")[security]["last_price"]
+          price = 0
           if self.inputs.realtrade:
             try:
                 order_id = kite.place_order(tradingsymbol=security,
@@ -138,19 +157,19 @@ class IntradayStradel():
                                 variety=kite.VARIETY_REGULAR,
                                 order_type=kite.ORDER_TYPE_MARKET,
                                 product=kite.PRODUCT_DAY)
-                avg_price = self.get_avg_price_of_order(order_id) 
-                logging.info(f"Sold {security} at price {avg_price}"
+                price = self.get_avg_price_of_order(order_id) 
+                logging.info(f"Sold {security} at price {price}"
                              f" and quantity {self.inputs.strategy.lotsize}")
             except Exception as e:
                 logging.info(f"Order placement failed: {e.message}")
           else:
             price = self.kite.quote(f"{security}")[security]["last_price"]
             logging.info(f"Sold {security} at price {price}")
-          self.record_trade(security,security_type)
+          self.record_trade(security,price,"Entry")
 
       def buy_security(self,security):
           self.quote_security()
-          price = self.kite.quote(f"{security}")[security]["last_price"]
+          price = 0 
           if self.inputs.realtrade:
             try:
                 order_id = kite.place_order(tradingsymbol=security,
@@ -160,15 +179,15 @@ class IntradayStradel():
                                 variety=kite.VARIETY_REGULAR,
                                 order_type=kite.ORDER_TYPE_MARKET,
                                 product=kite.PRODUCT_DAY)
-                avg_price = self.get_avg_price_of_order(order_id) 
-                logging.info(f"Bought {security} at price {avg_price}"
+                price = self.get_avg_price_of_order(order_id) 
+                logging.info(f"Bought {security} at price {price}"
                              f" and quantity {self.inputs.strategy.lotsize}")
             except Exception as e:
                 logging.info(f"Order placement failed: {e.message}")
           else:
             price = self.kite.quote(f"{security}")[security]["last_price"]
             logging.info(f"Bought {security} at price {price}") 
-          #self.record_trade(security,security_type)
+          self.record_trade(security,price,"Exit")
 
       def check_and_add_options(self):
           call_price = 0
@@ -260,7 +279,7 @@ class IntradayStradel():
       def start_trade(self,kite,inputs):
           self.kite = kite
           self.inputs = inputs
-          odf = pd.DataFrame(self.data,columns=self.columns)
+          self.odf = pd.DataFrame(self.data,columns=self.columns)
           self.print_description()
           self.execute_strategy() 
 
