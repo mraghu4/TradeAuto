@@ -1,4 +1,5 @@
 import time
+import os
 import logging
 import traceback
 import pandas as pd
@@ -7,7 +8,7 @@ import strategies.exitcodes as exitcodes
 """
    Description:
    Params:
-
+aaa
    Done:
         1) stradle with adjustments
         2) exit on stoploss or target hit
