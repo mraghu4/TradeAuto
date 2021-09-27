@@ -5,8 +5,19 @@ script: .options.intraday_stradel.opt_intraday_stradel_strategy
 entry:
     type: time
     #use 24Hr format
-    time: "10:00"
+    time: "04:30"
 exit:
     type: time
     #use 24Hr format
-    time: "15:00"
+    time: "9:30"
+#max_trade_count after strategy starts if number of trades
+# is going beyond max_trade_count, the strategy will exit.
+# This limnit is to safegaurd from strategy placing 
+# huge number of orders in case of voltile market.
+max_trade_count: 10
+#range_multiplier is how much steps up and down to be considred
+#in option chain for strategy.
+# E.g. 12 in Bank nifty is 1200 points up and 1200 points down
+#      from entry of strategy. if Bank nifty moves beyond 1200 points
+#      in one direction stragy mostly may not work.
+range_multiplier : 12

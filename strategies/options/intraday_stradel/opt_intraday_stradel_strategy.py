@@ -15,6 +15,7 @@ import strategies.exitcodes as exitcodes
         4) final trade report
    TODO:
         1) Continue trade which closed due to program exit
+       
 
 """
 
@@ -29,9 +30,9 @@ class IntradayStradel():
       exit_flag = None
       data = []
       columns = ["Type","Option",
-                 "Entry Price","Entry Time","Security at Entry",
-                 "Exit Price","Exit Time","Security at Exit"]
-      RANGE_MULTIPLIER = 12
+                 "Entry","Entry Time","Security at Entry",
+                 "Exit","Exit Time","Security at Exit"]
+      trade_count = 0
 
       def print_description(self):
           logging.info(self.inputs.strategy.description)
@@ -42,6 +43,15 @@ class IntradayStradel():
                       datetime.strptime(entry_time,'%H:%M').time()):
                   return
               time.sleep(60)
+
+      def get_csv_file(self):
+          logdir = "logs"
+          if not os.path.exists(logdir):
+             os.makedirs(logdir)
+          file_name = f"csv_{time.strftime('%Y%m%d-%H%M%S')}"
+          csv_report = os.path.join(logdir,file_name)
+          return csv_report
+
 
       def check_exit_time(self,exit_time):
           if (datetime.now().time() >=
@@ -80,6 +90,7 @@ class IntradayStradel():
                  return order['average_price']
 
       def record_trade(self,option,price,trade_type):
+          self.trade_count = self.trade_count + 1
           if option.endswith("CE"):
              opt_type = "CE"
              if trade_type ==  "Entry":
@@ -88,11 +99,10 @@ class IntradayStradel():
                 self.calls.remove(option)
           elif option.endswith("PE"):
              opt_type = "PE"
-             self.puts.append(option)
              if trade_type ==  "Entry":
-                self.calls.append(option)
+                self.puts.append(option)
              else:
-                self.calls.remove(option)
+                self.puts.remove(option)
           time_now = datetime.now()
           security,security_price = self.quote_security()
           if trade_type ==  "Entry":
@@ -130,8 +140,8 @@ class IntradayStradel():
       def get_security_near_price(self,price,opt_type):
           opt_list = []
           opt_dict = {}
-          start = int(self.start_price - (self.RANGE_MULTIPLIER * self.inputs.strategy.opt_gap))
-          end = int(self.start_price + (self.RANGE_MULTIPLIER * self.inputs.strategy.opt_gap))
+          start = int(self.start_price - (self.inputs.strategy.range_multiplier * self.inputs.strategy.opt_gap))
+          end = int(self.start_price + (self.inputs.strategy.range_multiplier * self.inputs.strategy.opt_gap))
           for val in range(start,end,self.inputs.strategy.opt_gap):
               opt_list.append(f"{self.inputs.strategy.opt_name}"
                              f"{self.inputs.strategy.opt_year}"
@@ -175,7 +185,7 @@ class IntradayStradel():
                                 quantity=self.inputs.strategy.lotsize,
                                 variety=kite.VARIETY_REGULAR,
                                 order_type=kite.ORDER_TYPE_MARKET,
-                                product=kite.PRODUCT_DAY)
+                                product=kite.PRODUCT_MIS)
                 price = self.get_avg_price_of_order(order_id) 
                 logging.info(f"Sold {security} at price {price}"
                              f" and quantity {self.inputs.strategy.lotsize}")
@@ -185,6 +195,7 @@ class IntradayStradel():
             price = self.kite.quote(f"{security}")[security]["last_price"]
             logging.info(f"Sold {security} at price {price}")
           self.record_trade(security,price,"Entry")
+          
 
       def buy_security(self,security):
           self.quote_security()
@@ -197,7 +208,7 @@ class IntradayStradel():
                                 quantity=self.inputs.strategy.lotsize,
                                 variety=kite.VARIETY_REGULAR,
                                 order_type=kite.ORDER_TYPE_MARKET,
-                                product=kite.PRODUCT_DAY)
+                                product=kite.PRODUCT_MIS)
                 price = self.get_avg_price_of_order(order_id) 
                 logging.info(f"Bought {security} at price {price}"
                              f" and quantity {self.inputs.strategy.lotsize}")
@@ -233,7 +244,8 @@ class IntradayStradel():
              return 
           share_PnL = self.odf["Entry"].sum() - self.odf["Exit"].sum()
           total_PnL = share_PnL * self.inputs.strategy.lotsize
-          logging.info(odf)
+          logging.info(self.odf)
+          self.odf.to_csv(self.get_csv_file())
           logging.info(f"Total Profit/Loss: {total_PnL}")
 
       def close_all_positions(self):
@@ -300,15 +312,21 @@ class IntradayStradel():
           total_current_val = 0
           for p in self.positions:
              total_current_val = total_current_val + self.kite.quote(f"{p}")[p]["last_price"]
-          profitp = (total_current_val - self.total_entry_val)/self.total_entry_val * 100
+          profitp = (total_current_val - total_entry_val)/total_entry_val * 100
           if profitp > self.inputs.strategy.target:
              return True
           return False
-          
+
+      def check_exit_max_trade_count(self,max_trade_count):
+          if self.trade_count >= max_trade_count:
+              logging.error(f"Max trade count {max_trade_count} reached. Exiting strategy")              
+              self.close_all_positions()
+              self.exit_flag = exitcodes.EXIT_MAX_TRADE_COUNT_REACHED
 
       def check_and_adjust(self):
           self.check_target_hit_exit()
           self.check_exit_time(self.inputs.strategy.exit.time)
+          self.check_exit_max_trade_count(self.inputs.strategy.max_trade_count)
           if self.level < 2 :
               self.check_and_add_options()
           else:
