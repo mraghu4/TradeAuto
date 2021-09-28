@@ -34,6 +34,7 @@ class IntradayStradel():
                  "Entry","Entry Time","Security at Entry",
                  "Exit","Exit Time","Security at Exit"]
       trade_count = 0
+      total_entry_val = 0
 
       def print_description(self):
           logging.info(self.inputs.strategy.description)
@@ -260,16 +261,16 @@ class IntradayStradel():
           for p in self.positions:
              total_current_val = (total_current_val +
                                  self.kite.quote(f"{p}")[p]["last_price"])
-          lossp = ((total_current_val - self.TOTAL_ENTRY_VAL) / 
-                   self.TOTAL_ENTRY_VAL * 100)
+          lossp = ((total_current_val - self.total_entry_val) / 
+                   self.total_entry_val * 100)
           if lossp > self.inputs.strategy.stoploss:
              return True
           return False
           
 
       def check_stop_loss_exit(self):
-          if self.TOTAL_ENTRY_VAL == 0:
-               self.TOTAL_ENTRY_VAL = self.odf["Entry"].sum()
+          if self.total_entry_val == 0:
+               self.total_entry_val = self.odf["Entry"].sum()
           if self.stop_loss_hit():
                self.close_all_positions()
                self.exit_flag = exitcodes.EXIT_STOPLOSS
