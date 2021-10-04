@@ -251,7 +251,7 @@ class IntradayStradel():
           logging.info(f"Total Profit/Loss: {total_PnL}")
 
       def close_all_positions(self):
-          for p in self.positions:
+          for p in self.positions[:]:
               self.buy_security(p)
           logging.info("Closed all positions")
           self.generate_report()
