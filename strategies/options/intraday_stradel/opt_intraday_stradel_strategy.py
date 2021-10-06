@@ -242,7 +242,8 @@ class IntradayStradel():
               self.level = self.level + 1
 
       def generate_report(self):
-          if len(self.positions) == 0:
+          if self.odf.shape[0] < 1:
+             #return if no trades happened
              return 
           share_PnL = self.odf["Entry"].sum() - self.odf["Exit"].sum()
           total_PnL = share_PnL * self.inputs.strategy.lotsize
