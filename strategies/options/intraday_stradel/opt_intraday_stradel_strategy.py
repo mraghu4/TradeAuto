@@ -91,7 +91,14 @@ class IntradayStradel():
               if order['order_id'] == order_id:
                  return order['average_price']
 
+      def quote_all_positions(self):
+          for p in self.positions:
+              price = self.kite.quote(f"{p}")[p]["last_price"]
+              logging.info(f"{p} at price: {price}")
+
+
       def record_trade(self,option,price,trade_type):
+          self.quote_all_positions()
           self.trade_count = self.trade_count + 1
           if option.endswith("CE"):
              opt_type = "CE"
