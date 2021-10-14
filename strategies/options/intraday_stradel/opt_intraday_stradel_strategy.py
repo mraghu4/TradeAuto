@@ -290,7 +290,7 @@ class IntradayStradel():
           min_put = self.kite.quote(f"{p}")[p]["last_price"]
           for p in self.puts:
              price = self.kite.quote(f"{p}")[p]["last_price"]
-             if price < min_price:
+             if price < min_put:
                   min_put = p
           self.buy_security(min_put)
           
@@ -300,7 +300,7 @@ class IntradayStradel():
           min_call = self.kite.quote(f"{c}")[c]["last_price"]
           for c in self.calls:
              price = self.kite.quote(f"{c}")[c]["last_price"]
-             if price < min_price:
+             if price < min_call:
                   min_call= c
           self.buy_security(min_call)
  
