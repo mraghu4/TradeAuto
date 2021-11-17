@@ -2,6 +2,7 @@ import time
 import os
 import logging
 import traceback
+import pytz
 import pandas as pd
 from datetime import datetime
 import strategies.exitcodes as exitcodes
@@ -29,6 +30,7 @@ class IntradayStradel():
       puts  = []
       positions = []
       exit_flag = None
+      ist_tz = pytz.timezone('Asia/Kolkata')
       data = []
       columns = ["Type","Option",
                  "Entry","Entry Time","Security at Entry",
@@ -41,7 +43,7 @@ class IntradayStradel():
 
       def wait_till_time(self,entry_time):
           while True:
-              if (datetime.now().time() >=
+              if (datetime.now(self.ist_tz).time() >=
                       datetime.strptime(entry_time,'%H:%M').time()):
                   return
               time.sleep(60)
@@ -56,7 +58,7 @@ class IntradayStradel():
 
 
       def check_exit_time(self,exit_time):
-          if (datetime.now().time() >=
+          if (datetime.now(self.ist_tz).time() >=
                   datetime.strptime(exit_time,'%H:%M').time()):
               logging.info("Current time beyond stragtegy exit time")
               self.close_all_positions()
@@ -85,8 +87,8 @@ class IntradayStradel():
                    "PE")
           return near_ce,near_pe
 
-      def get_avg_price_of_order(order_id):
-          orders = kite.orders()
+      def get_avg_price_of_order(self,order_id):
+          orders =self.kite.orders()
           for order in orders:
               if order['order_id'] == order_id:
                  return order['average_price']
@@ -112,7 +114,7 @@ class IntradayStradel():
                 self.puts.append(option)
              else:
                 self.puts.remove(option)
-          time_now = datetime.now()
+          time_now = datetime.now(self.ist_tz)
           security,security_price = self.quote_security()
           if trade_type ==  "Entry":
              self.positions.append(option)
@@ -185,16 +187,17 @@ class IntradayStradel():
 
       def sell_security(self,security):
           self.quote_security()
+          tradesymbol = security.split(":")[1]
           price = 0
           if self.inputs.realtrade:
             try:
-                order_id = kite.place_order(tradingsymbol=security,
-                                exchange=kite.EXCHANGE_NFO,
-                                transaction_type=kite.TRANSACTION_TYPE_SELL,
+                order_id = self.kite.place_order(tradingsymbol=tradesymbol,
+                                exchange=self.kite.EXCHANGE_NFO,
+                                transaction_type=self.kite.TRANSACTION_TYPE_SELL,
                                 quantity=self.inputs.strategy.lotsize,
-                                variety=kite.VARIETY_REGULAR,
-                                order_type=kite.ORDER_TYPE_MARKET,
-                                product=kite.PRODUCT_MIS)
+                                variety=self.kite.VARIETY_REGULAR,
+                                order_type=self.kite.ORDER_TYPE_MARKET,
+                                product=self.kite.PRODUCT_MIS)
                 price = self.get_avg_price_of_order(order_id) 
                 logging.info(f"Sold {security} at price {price}"
                              f" and quantity {self.inputs.strategy.lotsize}")
@@ -208,16 +211,17 @@ class IntradayStradel():
 
       def buy_security(self,security):
           self.quote_security()
+          tradesymbol = security.split(":")[1]
           price = 0 
           if self.inputs.realtrade:
             try:
-                order_id = kite.place_order(tradingsymbol=security,
-                                exchange=kite.EXCHANGE_NFO,
-                                transaction_type=kite.TRANSACTION_TYPE_BUY,
+                order_id = self.kite.place_order(tradingsymbol=tradesymbol,
+                                exchange=self.kite.EXCHANGE_NFO,
+                                transaction_type=self.kite.TRANSACTION_TYPE_BUY,
                                 quantity=self.inputs.strategy.lotsize,
-                                variety=kite.VARIETY_REGULAR,
-                                order_type=kite.ORDER_TYPE_MARKET,
-                                product=kite.PRODUCT_MIS)
+                                variety=self.kite.VARIETY_REGULAR,
+                                order_type=self.kite.ORDER_TYPE_MARKET,
+                                product=self.kite.PRODUCT_MIS)
                 price = self.get_avg_price_of_order(order_id) 
                 logging.info(f"Bought {security} at price {price}"
                              f" and quantity {self.inputs.strategy.lotsize}")
@@ -286,22 +290,24 @@ class IntradayStradel():
                self.check_and_remove_options()
 
       def exit_put_with_low_price(self):
-          p = self.puts[0]
-          min_put = self.kite.quote(f"{p}")[p]["last_price"]
+          min_put = self.puts[0]
+          min_put_price = self.kite.quote(f"{p}")[p]["last_price"]
           for p in self.puts:
              price = self.kite.quote(f"{p}")[p]["last_price"]
-             if price < min_put:
+             if price < min_put_price:
+                  min_put_price = price
                   min_put = p
           self.buy_security(min_put)
           
  
       def exit_call_with_low_price(self):
-          c = self.calls[0]
-          min_call = self.kite.quote(f"{c}")[c]["last_price"]
+          min_call = self.calls[0]
+          min_call_price = self.kite.quote(f"{c}")[c]["last_price"]
           for c in self.calls:
              price = self.kite.quote(f"{c}")[c]["last_price"]
-             if price < min_call:
-                  min_call= c
+             if price < min_call_price:
+                  min_call_price= price
+                  min_call = c
           self.buy_security(min_call)
  
 
