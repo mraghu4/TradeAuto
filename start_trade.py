@@ -5,6 +5,7 @@ import time
 import logging
 import importlib
 import sys
+import pytz
 from pathlib import Path
 from kiteconnect import KiteConnect
 from inputs.input_parser import InputParser
@@ -39,6 +40,7 @@ API_KEY = ip.get_apikey()
 API_SECRET = ip.get_apisecret()
 kite = KiteConnect(api_key=API_KEY)
 TOKEN_FILE = os.path.join(logdir,"kite_token")
+ist_tz = pytz.timezone('Asia/Kolkata')
 
 #definitions
 def get_access_token():

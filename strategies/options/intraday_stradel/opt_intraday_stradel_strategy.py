@@ -42,6 +42,7 @@ class IntradayStradel():
           logging.info(self.inputs.strategy.description)
 
       def wait_till_time(self,entry_time):
+          logging.info(f"No trade will happen untill time is {entry_time}")
           while True:
               if (datetime.now(self.ist_tz).time() >=
                       datetime.strptime(entry_time,'%H:%M').time()):
@@ -291,7 +292,7 @@ class IntradayStradel():
 
       def exit_put_with_low_price(self):
           min_put = self.puts[0]
-          min_put_price = self.kite.quote(f"{p}")[p]["last_price"]
+          min_put_price = self.kite.quote(f"{min_put}")[min_put]["last_price"]
           for p in self.puts:
              price = self.kite.quote(f"{p}")[p]["last_price"]
              if price < min_put_price:
@@ -302,7 +303,7 @@ class IntradayStradel():
  
       def exit_call_with_low_price(self):
           min_call = self.calls[0]
-          min_call_price = self.kite.quote(f"{c}")[c]["last_price"]
+          min_call_price = self.kite.quote(f"{min_call}")[min_call]["last_price"]
           for c in self.calls:
              price = self.kite.quote(f"{c}")[c]["last_price"]
              if price < min_call_price:
