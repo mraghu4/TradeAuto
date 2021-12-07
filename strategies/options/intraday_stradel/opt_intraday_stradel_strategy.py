@@ -42,11 +42,11 @@ class IntradayStradel():
           logging.info(self.inputs.strategy.description)
 
       def wait_till_time(self,entry_time):
-          logging.info(f"No trade will happen untill time is {entry_time}")
           while True:
               if (datetime.now(self.ist_tz).time() >=
                       datetime.strptime(entry_time,'%H:%M').time()):
                   return
+              logging.info(f"No trade will happen untill time is {entry_time}")
               time.sleep(60)
 
       def get_csv_file(self):
