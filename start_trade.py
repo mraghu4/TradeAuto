@@ -20,11 +20,16 @@ else:
   
 
 #set logging
+ist_tz = pytz.timezone('Asia/Kolkata')
+def logtz(*args):
+    return datetime.datetime.now(ist_tz).timetuple()
+
 logdir = "logs"
 if not os.path.exists(logdir):
     os.makedirs(logdir)
 file_name = f"log_{time.strftime('%Y%m%d-%H%M%S')}"
 logfile = os.path.join(logdir,file_name)
+logging.Formatter.converter = logtz
 logging.basicConfig(
     level=log_level,
     format="%(asctime)s [%(levelname)s] : %(message)s",
@@ -40,7 +45,6 @@ API_KEY = ip.get_apikey()
 API_SECRET = ip.get_apisecret()
 kite = KiteConnect(api_key=API_KEY)
 TOKEN_FILE = os.path.join(logdir,"kite_token")
-ist_tz = pytz.timezone('Asia/Kolkata')
 
 #definitions
 def get_access_token():

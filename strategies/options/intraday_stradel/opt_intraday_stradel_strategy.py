@@ -129,6 +129,7 @@ class IntradayStradel():
              self.positions.remove(option)
              self.odf.loc[self.odf.Option == option,
                  ["Exit","Exit Time","Security at Exit"]] = [price,time_now,security_price]
+          logging.info(f"Level:\n{self.level}")
           logging.info(f"Data Frame:\n{self.odf}")
           logging.info(f"CALLS :\n{self.calls}")
           logging.info(f"PUTS :\n{self.puts}")
