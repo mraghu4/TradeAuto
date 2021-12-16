@@ -29,6 +29,7 @@ class IntradayStradel():
       calls = []
       puts  = []
       positions = []
+      level = 0
       exit_flag = None
       ist_tz = pytz.timezone('Asia/Kolkata')
       data = []
