@@ -38,6 +38,7 @@ class IntradayStradel():
                  "Exit","Exit Time","Security at Exit"]
       trade_count = 0
       total_entry_val = 0
+      offset = 0
 
       def print_description(self):
           logging.info(self.inputs.strategy.description)
@@ -191,6 +192,7 @@ class IntradayStradel():
       def sell_security(self,security):
           self.quote_security()
           tradesymbol = security.split(":")[1]
+          print(tradesymbol)
           price = 0
           if self.inputs.realtrade:
             try:
@@ -244,12 +246,12 @@ class IntradayStradel():
           for p in self.puts:
               put_price = put_price + self.kite.quote(f"{p}")[p]["last_price"]
               logging.debug(f"{p} is at price {put_price}")
-          if call_price/2 > put_price :
+          if call_price/2 > put_price + self.offset:
               #call is double to put.
               #adjust with put which is 1/4th price of call
               self.sell_put(call_price/4)
               self.level = self.level + 1
-          if put_price/2 > call_price:
+          if put_price/2 > call_price + self.offset:
               #put is double to put.
               #adjust with call which is 1/4th price of put
               self.sell_call(put_price/4)
@@ -289,8 +291,6 @@ class IntradayStradel():
           if self.stop_loss_hit():
                self.close_all_positions()
                self.exit_flag = exitcodes.EXIT_STOPLOSS
-          else:
-               self.check_and_remove_options()
 
       def exit_put_with_low_price(self):
           min_put = self.puts[0]
@@ -321,9 +321,9 @@ class IntradayStradel():
               call_price = call_price + self.kite.quote(f"{c}")[c]["last_price"]
           for p in self.puts:
               put_price = put_price + self.kite.quote(f"{p}")[p]["last_price"]
-          if call_price <= put_price and len(self.puts) > 1:
+          if call_price <= put_price and len(self.puts) > len(self.calls):
              self.exit_put_with_low_price()
-          if call_price >= put_price and len(self.calls) > 1:
+          if call_price >= put_price and len(self.calls) > len(self.puts):
              self.exit_call_with_low_price()
 
       def check_target_hit_exit(self):
@@ -332,6 +332,7 @@ class IntradayStradel():
           for p in self.positions:
              total_current_val = total_current_val + self.kite.quote(f"{p}")[p]["last_price"]
           profitp = (total_current_val - total_entry_val)/total_entry_val * 100
+          logging.info(f"Total Entry Value :{total_entry_val}, Total Current value{total_current_val}, Profit: {profitp}%")
           if profitp > self.inputs.strategy.target:
              return True
           return False
@@ -350,6 +351,7 @@ class IntradayStradel():
               self.check_and_add_options()
           else:
               self.check_stop_loss_exit()
+          self.check_and_remove_options()
 
       def watch_adjust_or_exit(self):
           while True:
@@ -374,6 +376,7 @@ class IntradayStradel():
           self.kite = kite
           self.inputs = inputs
           self.odf = pd.DataFrame(self.data,columns=self.columns)
+          self.offset = self.inputs.strategy.offset
           self.print_description()
           self.execute_strategy() 
 
