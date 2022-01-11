@@ -323,8 +323,10 @@ class IntradayStradel():
               put_price = put_price + self.kite.quote(f"{p}")[p]["last_price"]
           if call_price <= put_price and len(self.puts) > len(self.calls):
              self.exit_put_with_low_price()
+             self.level = self.level - 1
           if call_price >= put_price and len(self.calls) > len(self.puts):
              self.exit_call_with_low_price()
+             self.level = self.level - 1
 
       def check_target_hit_exit(self):
           total_entry_val = self.odf["Entry"].sum()
