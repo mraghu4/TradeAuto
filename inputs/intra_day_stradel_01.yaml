@@ -5,7 +5,7 @@ script: .options.intraday_stradel.opt_intraday_stradel_strategy
 entry:
     type: time
     #use 24Hr format
-    time: "10:00"
+    time: "9:45"
 exit:
     type: time
     #use 24Hr format
@@ -21,3 +21,4 @@ max_trade_count: 10
 #      from entry of strategy. if Bank nifty moves beyond 1200 points
 #      in one direction stragy mostly may not work.
 range_multiplier : 12
+offset : 10

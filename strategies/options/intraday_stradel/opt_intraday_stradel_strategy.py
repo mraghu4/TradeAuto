@@ -31,6 +31,7 @@ class IntradayStradel():
       positions = []
       level = 0
       exit_flag = None
+      exit_message = None
       ist_tz = pytz.timezone('Asia/Kolkata')
       data = []
       columns = ["Type","Option",
@@ -66,6 +67,7 @@ class IntradayStradel():
               logging.info("Current time beyond stragtegy exit time")
               self.close_all_positions()
               self.exit_flag = exitcodes.EXIT_TIMETRIGGER
+              self.exit_message = "Exit time reached"
               return True
           else:
               return False
@@ -90,11 +92,17 @@ class IntradayStradel():
                    "PE")
           return near_ce,near_pe
 
-      def get_avg_price_of_order(self,order_id):
+      def validate_and_get_avg_price_of_order(self,order_id):
           orders =self.kite.orders()
           for order in orders:
-              if order['order_id'] == order_id:
-                 return order['average_price']
+              if order['order_id'] == order_id :
+                  if  order['status'] == 'REJECTED':
+                      logging.error(order['status_message'])
+                      self.close_all_positions()
+                      self.exit_flag = exitcodes.EXIT_ORDER_PLACE_FAILURE
+                      self.exit_message = "Order rejected"
+                  else: 
+                      return order['average_price']
 
       def quote_all_positions(self):
           for p in self.positions:
@@ -203,7 +211,7 @@ class IntradayStradel():
                                 variety=self.kite.VARIETY_REGULAR,
                                 order_type=self.kite.ORDER_TYPE_MARKET,
                                 product=self.kite.PRODUCT_MIS)
-                price = self.get_avg_price_of_order(order_id) 
+                price = self.validate_and_get_avg_price_of_order(order_id) 
                 logging.info(f"Sold {security} at price {price}"
                              f" and quantity {self.inputs.strategy.lotsize}")
             except Exception as e:
@@ -227,7 +235,7 @@ class IntradayStradel():
                                 variety=self.kite.VARIETY_REGULAR,
                                 order_type=self.kite.ORDER_TYPE_MARKET,
                                 product=self.kite.PRODUCT_MIS)
-                price = self.get_avg_price_of_order(order_id) 
+                price = self.validate_and_get_avg_price_of_order(order_id) 
                 logging.info(f"Bought {security} at price {price}"
                              f" and quantity {self.inputs.strategy.lotsize}")
             except Exception as e:
@@ -291,6 +299,7 @@ class IntradayStradel():
           if self.stop_loss_hit():
                self.close_all_positions()
                self.exit_flag = exitcodes.EXIT_STOPLOSS
+               self.exit_message = "Stoploss hit"
 
       def exit_put_with_low_price(self):
           min_put = self.puts[0]
@@ -333,17 +342,21 @@ class IntradayStradel():
           total_current_val = 0
           for p in self.positions:
              total_current_val = total_current_val + self.kite.quote(f"{p}")[p]["last_price"]
-          profitp = (total_current_val - total_entry_val)/total_entry_val * 100
-          logging.info(f"Total Entry Value :{total_entry_val}, Total Current value{total_current_val}, Profit: {profitp}%")
+          profitp = (total_entry_val-total_current_val)/total_entry_val * 100
+          logging.info(f"\n\tTotal Entry Value: {total_entry_val}"
+                       f"\n\tTotal Current value: {total_current_val}"
+                       f"\n\tProfit: {profitp}%")
           if profitp > self.inputs.strategy.target:
-             return True
-          return False
+             self.close_all_positions()
+             self.exit_flag = exitcodes.EXIT_TARTGET
+             self.exit_message = "Target reached"
 
       def check_exit_max_trade_count(self,max_trade_count):
           if self.trade_count >= max_trade_count:
               logging.error(f"Max trade count {max_trade_count} reached. Exiting strategy")              
               self.close_all_positions()
               self.exit_flag = exitcodes.EXIT_MAX_TRADE_COUNT_REACHED
+              self.exit_message = "Exceeded max trade count"
 
       def check_and_adjust(self):
           self.check_target_hit_exit()
@@ -358,6 +371,7 @@ class IntradayStradel():
       def watch_adjust_or_exit(self):
           while True:
               if self.exit_flag :
+                  logging.info(f"Exiting due to: {self.exit_message}")
                   exit(self.exit_flag)
               try:
                 self.check_and_adjust()
