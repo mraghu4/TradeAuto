@@ -219,7 +219,8 @@ class IntradayStradel():
           else:
             price = self.kite.quote(f"{security}")[security]["last_price"]
             logging.info(f"Sold {security} at price {price}")
-          self.record_trade(security,price,"Entry")
+          if price > 0:
+             self.record_trade(security,price,"Entry")
           
 
       def buy_security(self,security):
@@ -242,8 +243,9 @@ class IntradayStradel():
                 logging.info(f"Order placement failed: {e.message}")
           else:
             price = self.kite.quote(f"{security}")[security]["last_price"]
-            logging.info(f"Bought {security} at price {price}") 
-          self.record_trade(security,price,"Exit")
+            logging.info(f"Bought {security} at price {price}")
+          if price > 0:
+            self.record_trade(security,price,"Exit")
 
       def check_and_add_options(self):
           call_price = 0
