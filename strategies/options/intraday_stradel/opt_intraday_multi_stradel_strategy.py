@@ -11,7 +11,7 @@ import strategies.exitcodes as exitcodes
    Params:
 aaa
    Done:
-        1) stradle with adjustments
+        1) stradle with stop losses. then move strand if one stoploss hit
         2) exit on stoploss or target hit
         3) enter and exit based on time
         4) final trade report
@@ -27,7 +27,7 @@ aaa
 """
 
 
-class IntradayStradel():
+class IntradayMultiStradel():
       kite = None
       instrument = None
       inputs = None
@@ -39,12 +39,13 @@ class IntradayStradel():
       exit_message = None
       ist_tz = pytz.timezone('Asia/Kolkata')
       data = []
-      columns = ["Type","Trade Count","Option",
+      columns = ["Type", "SL Order ID","Trade Count","Option",
                  "Entry","Entry Time","Security at Entry",
                  "Exit","Exit Time","Security at Exit"]
       trade_count = 0
       total_entry_val = 0
       offset = 0
+      stop_loss_multiplier = 1
 
       def print_description(self):
           logging.info(self.inputs.strategy.description)
@@ -115,7 +116,7 @@ class IntradayStradel():
               logging.info(f"{p} at price: {price}")
 
 
-      def record_trade(self,option,price,trade_type):
+      def record_trade(self,option,price,trade_type,sl_oder_id):
           self.quote_all_positions()
           self.trade_count = self.trade_count + 1
           if option.endswith("CE"):
@@ -130,6 +131,8 @@ class IntradayStradel():
                 self.puts.append(option)
              else:
                 self.puts.remove(option)
+          if sl_oder_id > 0:
+             self.sl_oders.append(sl_oder_id)
           time_now = datetime.now(self.ist_tz)
           security,security_price = self.quote_security()
           if trade_type ==  "Entry":
@@ -139,20 +142,20 @@ class IntradayStradel():
                                "Entry":price,
                                "Entry Time":time_now,
                                "Security at Entry": security_price,
-                               "Trade Count": self.trade_count},
+                               "Trade Count":self.trade_count
+                               "SL Order ID":sl_oder_id},
                                ignore_index=True)
           else:
              self.positions.remove(option)
              max_match_trade_cnt = max(self.odf.query("Option" == option)['Trade Count'])
              self.odf.loc[self.odf.Option == option,
                  ["Exit","Exit Time","Security at Exit","Trade Count"]] = [price,time_now,security_price,max_match_trade_cnt]
-             #self.odf.loc[self.odf.Option == option,
-             #    ["Exit","Exit Time","Security at Exit"]] = [price,time_now,security_price]
           logging.info(f"Level:\n{self.level}")
           logging.info(f"Data Frame:\n{self.odf}")
           logging.info(f"CALLS :\n{self.calls}")
           logging.info(f"PUTS :\n{self.puts}")
           logging.info(f"POSTIONS :\n{self.positions}")
+          logging.info(f"SL Orders :\n{self.sl_oders}")
  
            
       def trade_stradel(self):
@@ -160,32 +163,11 @@ class IntradayStradel():
           security_price = self.get_security_price(security)
           security_option_gap = self.inputs.strategy.opt_gap
           call,put = self.get_near_options(security_price,security_option_gap)
-          logging.info(f"Stradel start with {call} and {put}")
+          logging.info(f"Creating Stradel with {call} and {put}")
           self.sell_security(call)
           self.sell_security(put)
           self.level = 0
           return None
-
-      def price_opt_pair(self,opt_chain,price,key):
-          return dict({key:abs(price - opt_chain[key]["last_price"])})
-
-      def get_security_near_price(self,price,opt_type):
-          opt_list = []
-          opt_dict = {}
-          start = int(self.start_price - (self.inputs.strategy.range_multiplier * self.inputs.strategy.opt_gap))
-          end = int(self.start_price + (self.inputs.strategy.range_multiplier * self.inputs.strategy.opt_gap))
-          for val in range(start,end,self.inputs.strategy.opt_gap):
-              opt_list.append(f"{self.inputs.strategy.opt_name}"
-                             f"{self.inputs.strategy.opt_year}"
-                             f"{self.inputs.strategy.opt_month}"
-                             f"{self.inputs.strategy.opt_day}"
-                             f"{val}{opt_type}")
-          opt_chain = self.kite.quote(opt_list)
-          logging.debug(opt_chain)
-          opt_price_lst = [self.price_opt_pair(opt_chain,price,k) for k in opt_list]
-          for item in opt_price_lst:
-              opt_dict.update(item)
-          return min(opt_dict,key=opt_dict.get)
 
       def quote_security(self):
           main_security = self.inputs.strategy.security
@@ -193,18 +175,6 @@ class IntradayStradel():
           logging.info(f"{main_security} is now at {main_security_price}")
           return main_security,main_security_price
           
-
-      def sell_put(self,price):
-          self.quote_security()
-          security = self.get_security_near_price(price,"PE")
-          self.sell_security(security)
-          return None
-
-      def sell_call(self,price):
-          self.quote_security()
-          security = self.get_security_near_price(price,"CE")
-          self.sell_security(security)
-          return None
 
       def sell_security(self,security):
           self.quote_security()
@@ -225,11 +195,24 @@ class IntradayStradel():
                              f" and quantity {self.inputs.strategy.lotsize}")
             except Exception as e:
                 logging.info(f"Order placement failed: {e.message}")
+            try:
+                sl_order_id = self.kite.place_order(tradingsymbol=tradesymbol,
+                                exchange=self.kite.EXCHANGE_NFO,
+                                transaction_type=self.kite.TRANSACTION_TYPE_BUY,
+                                quantity=self.inputs.strategy.lotsize,
+                                variety=self.kite.VARIETY_REGULAR,
+                                order_type=self.kite.ORDER_TYPE_SL,
+                                trigger_price=price * self.stop_loss_multiplier,
+                                price= self.offset + (price * self.stop_loss_multiplier),
+                                product=self.kite.PRODUCT_MIS)
+            except Exception as e:
+                logging.info(f"Stop Loss Order placement failed: {e.message}")
+
           else:
             price = self.kite.quote(f"{security}")[security]["last_price"]
             logging.info(f"Sold {security} at price {price}")
           if price > 0:
-             self.record_trade(security,price,"Entry")
+             self.record_trade(security,price,"Entry",sl_order_id)
           
 
       def buy_security(self,security):
@@ -256,25 +239,34 @@ class IntradayStradel():
           if price > 0:
             self.record_trade(security,price,"Exit")
 
+      def sl_order_executed():
+          ret =  False
+          for order in self.sl_orders:
+              status = slef.kite.order_history(order)['status'] 
+              if status != "OPEN":
+                 self.sl_orders.remove(order)
+                 ret = True
+          return ret
+
+      def get_ltp_of_order(self,order_id):
+          instument = self.odf.query("SL Order ID" == order_id)['Option'] 
+          return self.kite.ltp(instumentq
+
+      def update_trigger_of_exiting_sl_order(self):
+          for sl_order in self.sl_orders:
+              ltp = self.get_ltp_of_order(sl_order)
+              new_trigger_price = ltp * self.stop_loss_multiplier
+              new_price = self.offset + (ltp * self.stop_loss_multiplier)
+              self.kite.modify_order(variety=self.kite.VARIETY_SL,
+                                     order_id=sl_order,
+                                     price=new_price,
+                                     trigger_price=new_trigger_price)
+  
+
       def check_and_add_options(self):
-          call_price = 0
-          put_price  = 0 
-          for c in self.calls:
-              call_price = call_price + self.kite.quote(f"{c}")[c]["last_price"]
-              logging.debug(f"{c} is at price {call_price}")
-          for p in self.puts:
-              put_price = put_price + self.kite.quote(f"{p}")[p]["last_price"]
-              logging.debug(f"{p} is at price {put_price}")
-          if call_price/2 > put_price + self.offset:
-              #call is double to put.
-              #adjust with put which is 1/4th price of call
-              self.sell_put(call_price/4)
-              self.level = self.level + 1
-          if put_price/2 > call_price + self.offset:
-              #put is double to put.
-              #adjust with call which is 1/4th price of put
-              self.sell_call(put_price/4)
-              self.level = self.level + 1
+          if self.sl_order_executed():
+             self.update_trigger_of_exiting_sl_order():
+             self.trade_stradel()
 
       def generate_report(self):
           if self.odf.shape[0] < 1:
@@ -286,11 +278,17 @@ class IntradayStradel():
           self.odf.to_csv(self.get_csv_file())
           logging.info(f"Total Profit/Loss: {total_PnL}")
 
+      def cancel_all_sl_orders(self):
+          for order in self.sl_orders:
+              slef.kite.cancel_order(varity = self.kite.VARIETY_SL,
+                                     order_id = order)
+
       def close_all_positions(self):
           for p in self.positions[:]:
               self.buy_security(p)
           logging.info("Closed all positions")
           self.generate_report()
+          self.cancel_all_sl_orders()
 
       def stop_loss_hit(self):
           total_current_val = 0 
@@ -312,42 +310,6 @@ class IntradayStradel():
                self.exit_flag = exitcodes.EXIT_STOPLOSS
                self.exit_message = "Stoploss hit"
 
-      def exit_put_with_low_price(self):
-          min_put = self.puts[0]
-          min_put_price = self.kite.quote(f"{min_put}")[min_put]["last_price"]
-          for p in self.puts:
-             price = self.kite.quote(f"{p}")[p]["last_price"]
-             if price < min_put_price:
-                  min_put_price = price
-                  min_put = p
-          self.buy_security(min_put)
-          
- 
-      def exit_call_with_low_price(self):
-          min_call = self.calls[0]
-          min_call_price = self.kite.quote(f"{min_call}")[min_call]["last_price"]
-          for c in self.calls:
-             price = self.kite.quote(f"{c}")[c]["last_price"]
-             if price < min_call_price:
-                  min_call_price= price
-                  min_call = c
-          self.buy_security(min_call)
- 
-
-      def check_and_remove_options(self):
-          call_price = 0
-          put_price  = 0
-          for c in self.calls:
-              call_price = call_price + self.kite.quote(f"{c}")[c]["last_price"]
-          for p in self.puts:
-              put_price = put_price + self.kite.quote(f"{p}")[p]["last_price"]
-          if call_price <= put_price and len(self.puts) > len(self.calls):
-             self.exit_put_with_low_price()
-             self.level = self.level - 1
-          if call_price >= put_price and len(self.calls) > len(self.puts):
-             self.exit_call_with_low_price()
-             self.level = self.level - 1
-
       def check_target_hit_exit(self):
           total_entry_val = self.odf["Entry"].sum()
           total_current_val = 0
@@ -362,22 +324,11 @@ class IntradayStradel():
              self.exit_flag = exitcodes.EXIT_TARTGET
              self.exit_message = "Target reached"
 
-      def check_exit_max_trade_count(self,max_trade_count):
-          if self.trade_count >= max_trade_count:
-              logging.error(f"Max trade count {max_trade_count} reached. Exiting strategy")              
-              self.close_all_positions()
-              self.exit_flag = exitcodes.EXIT_MAX_TRADE_COUNT_REACHED
-              self.exit_message = "Exceeded max trade count"
-
       def check_and_adjust(self):
           self.check_target_hit_exit()
           self.check_exit_time(self.inputs.strategy.exit.time)
-          self.check_exit_max_trade_count(self.inputs.strategy.max_trade_count)
-          if self.level < 2 :
-              self.check_and_add_options()
-          else:
-              self.check_stop_loss_exit()
-          self.check_and_remove_options()
+          self.check_and_add_options()
+          self.check_stop_loss_exit()
 
       def watch_adjust_or_exit(self):
           while True:
@@ -404,6 +355,7 @@ class IntradayStradel():
           self.inputs = inputs
           self.odf = pd.DataFrame(self.data,columns=self.columns)
           self.offset = self.inputs.strategy.offset
+          self.stop_loss_multiplier = self.stop_loss_multiplier + (self.inputs.strategy.order_stop_loss / 100)
           self.print_description()
           self.execute_strategy() 
 
