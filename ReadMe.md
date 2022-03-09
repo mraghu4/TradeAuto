@@ -11,4 +11,4 @@
     
 ### How to Start trade
    After editing kite inputs.yaml and strategy_inputs.yaml execute
-    > python3 start_trade.py
+   > python3 start_trade.py
