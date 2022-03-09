@@ -1,0 +1,20 @@
+description: >
+       Intraday Stradel with SL and trail remaining SL when one of SL is executed
+classname: IntradaySLStradel
+script: .options.intraday_stradel.opt_intraday_sl_stradel_strategy
+entry:
+    type: time
+    #use 24Hr format
+    time: "9:25"
+exit:
+    type: time
+    #use 24Hr format
+    time: "15:15"
+#off set is difference between trigger_price and price in stoploss
+offset : 5
+#order_stop_loss is percent of sl to be placed for positions
+order_stop_loss : 30
+#update trailing when gap is more than sl_order_trailing_gap between
+#current price and previous sl price.
+#E.g. current sl is at 100 and trail wont get updated untill price is below 75
+sl_order_trailing_gap = 25

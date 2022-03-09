@@ -27,7 +27,7 @@ aaa
 """
 
 
-class IntradayMultiStradel():
+class IntradaySLStradel():
       kite = None
       instrument = None
       inputs = None
@@ -47,7 +47,7 @@ class IntradayMultiStradel():
       total_entry_val = 0
       offset = 0
       stop_loss_multiplier = 1
-      adjust_stop_time = "14:00"
+      sl_trail_diff_gap = 25
 
       def print_description(self):
           logging.info(self.inputs.strategy.description)
@@ -245,13 +245,15 @@ class IntradayMultiStradel():
             self.record_trade(security,price,"Exit",0)
 
       def sl_order_executed(self):
+          if self.sl_triggered:
+              return True
           ret =  False
           for order in self.sl_orders:
               status = self.kite.order_history(order)[-1]['status'] 
               if status == "COMPLETE":
                  logging.info(f"SL Order {order} is Executed")
                  self.sl_orders.remove(order)
-                 logging.info(f"Active SL Orders : {self.sl_orders}")
+                 self.sl_triggerd = True
                  ret = True
           return ret
 
@@ -260,7 +262,7 @@ class IntradayMultiStradel():
           return self.kite.ltp(instument)
 
       def get_sl_trigger_price(self,order_id):
-          return self.kite.order_history(order_id)[-1]['trigger_price']
+          return self.kite.order_history(order_id)[-1]['trigger_price'] 
 
       def update_trigger_of_exiting_sl_order(self):
           for sl_order in self.sl_orders:
@@ -268,22 +270,17 @@ class IntradayMultiStradel():
               old_trigger_price = self.get_sl_trigger_price(sl_order)
               new_trigger_price = int(ltp * self.stop_loss_multiplier)
               new_price = int(self.offset + (ltp * self.stop_loss_multiplier))
-              if new_trigger_price > old_trigger_price:
-                  self.kite.modify_order(variety=self.kite.VARIETY_SL,
-                                         order_id=sl_order,
-                                         price=new_price,
-                                         trigger_price=new_trigger_price)
-                  logging.info(f"Changed Order {sl_order} Trigger price to {new_trigger_price} and Price to {new_price}")
-  
+              if new_trigger_price > old_trigger_price + self.sl_trail_diff_gap:
+                   self.kite.modify_order(variety=self.kite.VARIETY_SL,
+                                          order_id=sl_order,
+                                          price=new_price,
+                                          trigger_price=new_trigger_price)
+                   logging.info(f"Changed Order {sl_order} Trigger price to {new_trigger_price} and Price to {new_price}")
 
-      def check_and_add_options(self):
+
+      def check_and_modfify_sl_trigger(self):
           if self.sl_order_executed():
              self.update_trigger_of_exiting_sl_order()
-             if (datetime.now(self.ist_tz).time() >=
-                  datetime.strptime(self.adjust_stop_time,'%H:%M').time()):
-                 #Time is close to exit. don't trade new stradel
-                 return
-             self.trade_stradel()
 
       def generate_report(self):
           if self.odf.shape[0] < 1:
@@ -344,7 +341,7 @@ class IntradayMultiStradel():
       def check_and_adjust(self):
           self.check_target_hit_exit()
           self.check_exit_time(self.inputs.strategy.exit.time)
-          self.check_and_add_options()
+          self.check_and_modfify_sl_trigger()
           self.check_stop_loss_exit()
 
       def watch_adjust_or_exit(self):
@@ -372,8 +369,8 @@ class IntradayMultiStradel():
           self.inputs = inputs
           self.odf = pd.DataFrame(self.data,columns=self.columns)
           self.offset = self.inputs.strategy.offset
-          self.adjust_stop_time = self.inputs.strategy.adjust_stop_time
           self.stop_loss_multiplier = self.stop_loss_multiplier + (self.inputs.strategy.order_stop_loss / 100)
+          self.sl_trail_diff_gap = self.inputs.strategy.sl_order_trailing_gap
           self.print_description()
           self.execute_strategy() 
 
