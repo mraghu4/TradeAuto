@@ -1,0 +1,18 @@
+description: >
+       Intraday Dynamic Stradel based on stop loss hit and current spot
+classname: IntradayMultiStradel
+script: .options.intraday_stradel.opt_intraday_multi_stradel_strategy
+entry:
+    type: time
+    #use 24Hr format
+    time: "9:30"
+exit:
+    type: time
+    #use 24Hr format
+    time: "15:00"
+#adjust_stop_time is stop placing new trades after this time
+adjust_stop_time: "14:00"
+#off set is difference between trigger_price and price in stoploss
+offset : 5
+#order_stop_loss is percent of sl to be placed for positions
+order_stop_loss : 30

@@ -34,18 +34,20 @@ class IntradayMultiStradel():
       calls = []
       puts  = []
       positions = []
+      sl_orders = []
       level = 0
       exit_flag = None
       exit_message = None
       ist_tz = pytz.timezone('Asia/Kolkata')
       data = []
-      columns = ["Type", "SL Order ID","Trade Count","Option",
+      columns = ["Type", "SL_Order_ID","Trade Count","Option",
                  "Entry","Entry Time","Security at Entry",
                  "Exit","Exit Time","Security at Exit"]
       trade_count = 0
       total_entry_val = 0
       offset = 0
       stop_loss_multiplier = 1
+      adjust_stop_time = "14:00"
 
       def print_description(self):
           logging.info(self.inputs.strategy.description)
@@ -116,7 +118,7 @@ class IntradayMultiStradel():
               logging.info(f"{p} at price: {price}")
 
 
-      def record_trade(self,option,price,trade_type,sl_oder_id):
+      def record_trade(self,option,price,trade_type,sl_order_id):
           self.quote_all_positions()
           self.trade_count = self.trade_count + 1
           if option.endswith("CE"):
@@ -131,8 +133,9 @@ class IntradayMultiStradel():
                 self.puts.append(option)
              else:
                 self.puts.remove(option)
-          if sl_oder_id > 0:
-             self.sl_oders.append(sl_oder_id)
+          if sl_order_id > 0:
+             self.sl_orders.append(sl_order_id)
+             logging.info(self.kite.order_history(sl_order_id))
           time_now = datetime.now(self.ist_tz)
           security,security_price = self.quote_security()
           if trade_type ==  "Entry":
@@ -142,12 +145,12 @@ class IntradayMultiStradel():
                                "Entry":price,
                                "Entry Time":time_now,
                                "Security at Entry": security_price,
-                               "Trade Count":self.trade_count
-                               "SL Order ID":sl_oder_id},
+                               "Trade Count":self.trade_count,
+                               "SL_Order_ID":sl_order_id},
                                ignore_index=True)
           else:
              self.positions.remove(option)
-             max_match_trade_cnt = max(self.odf.query("Option" == option)['Trade Count'])
+             max_match_trade_cnt = max(self.odf.query(f"Option == {option}")['Trade Count'])
              self.odf.loc[self.odf.Option == option,
                  ["Exit","Exit Time","Security at Exit","Trade Count"]] = [price,time_now,security_price,max_match_trade_cnt]
           logging.info(f"Level:\n{self.level}")
@@ -155,7 +158,7 @@ class IntradayMultiStradel():
           logging.info(f"CALLS :\n{self.calls}")
           logging.info(f"PUTS :\n{self.puts}")
           logging.info(f"POSTIONS :\n{self.positions}")
-          logging.info(f"SL Orders :\n{self.sl_oders}")
+          logging.info(f"SL Orders :\n{self.sl_orders}")
  
            
       def trade_stradel(self):
@@ -202,9 +205,11 @@ class IntradayMultiStradel():
                                 quantity=self.inputs.strategy.lotsize,
                                 variety=self.kite.VARIETY_REGULAR,
                                 order_type=self.kite.ORDER_TYPE_SL,
-                                trigger_price=price * self.stop_loss_multiplier,
-                                price= self.offset + (price * self.stop_loss_multiplier),
+                                trigger_price=int(price * self.stop_loss_multiplier),
+                                price= int(self.offset + (price * self.stop_loss_multiplier)),
                                 product=self.kite.PRODUCT_MIS)
+                logging.info(f"Placed SL order for {tradesymbol} ID: {sl_order_id}")
+                sl_order_id = int(sl_order_id)
             except Exception as e:
                 logging.info(f"Stop Loss Order placement failed: {e.message}")
 
@@ -237,26 +242,26 @@ class IntradayMultiStradel():
             price = self.kite.quote(f"{security}")[security]["last_price"]
             logging.info(f"Bought {security} at price {price}")
           if price > 0:
-            self.record_trade(security,price,"Exit")
+            self.record_trade(security,price,"Exit",0)
 
-      def sl_order_executed():
+      def sl_order_executed(self):
           ret =  False
           for order in self.sl_orders:
-              status = slef.kite.order_history(order)['status'] 
-              if status != "OPEN":
+              status = self.kite.order_history(order)[-1]['status'] 
+              if status == "COMPLETE":
                  self.sl_orders.remove(order)
                  ret = True
           return ret
 
       def get_ltp_of_order(self,order_id):
-          instument = self.odf.query("SL Order ID" == order_id)['Option'] 
-          return self.kite.ltp(instumentq
+          instument = self.odf.query(f"SL_Order_ID =={ order_id}")['Option'] 
+          return self.kite.ltp(instument)
 
       def update_trigger_of_exiting_sl_order(self):
           for sl_order in self.sl_orders:
               ltp = self.get_ltp_of_order(sl_order)
-              new_trigger_price = ltp * self.stop_loss_multiplier
-              new_price = self.offset + (ltp * self.stop_loss_multiplier)
+              new_trigger_price = int(ltp * self.stop_loss_multiplier)
+              new_price = int(self.offset + (ltp * self.stop_loss_multiplier))
               self.kite.modify_order(variety=self.kite.VARIETY_SL,
                                      order_id=sl_order,
                                      price=new_price,
@@ -265,7 +270,7 @@ class IntradayMultiStradel():
 
       def check_and_add_options(self):
           if self.sl_order_executed():
-             self.update_trigger_of_exiting_sl_order():
+             self.update_trigger_of_exiting_sl_order()
              self.trade_stradel()
 
       def generate_report(self):
@@ -280,7 +285,7 @@ class IntradayMultiStradel():
 
       def cancel_all_sl_orders(self):
           for order in self.sl_orders:
-              slef.kite.cancel_order(varity = self.kite.VARIETY_SL,
+              self.kite.cancel_order(varity = self.kite.VARIETY_SL,
                                      order_id = order)
 
       def close_all_positions(self):
@@ -355,6 +360,7 @@ class IntradayMultiStradel():
           self.inputs = inputs
           self.odf = pd.DataFrame(self.data,columns=self.columns)
           self.offset = self.inputs.strategy.offset
+          self.adjust_stop_time = self.inputs.strategy.adjust_stop_time
           self.stop_loss_multiplier = self.stop_loss_multiplier + (self.inputs.strategy.order_stop_loss / 100)
           self.print_description()
           self.execute_strategy() 
