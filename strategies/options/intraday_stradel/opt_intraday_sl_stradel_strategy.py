@@ -48,6 +48,7 @@ class IntradaySLStradel():
       offset = 0
       stop_loss_multiplier = 1
       sl_trail_diff_gap = 25
+      sl_triggered = False
 
       def print_description(self):
           logging.info(self.inputs.strategy.description)
@@ -245,21 +246,27 @@ class IntradaySLStradel():
             self.record_trade(security,price,"Exit",0)
 
       def sl_order_executed(self):
-          if self.sl_triggered:
-              return True
+          if len(self.sl_orders) < 1:
+             logging.info("All SL orders hit and closing trade")
+             self.exit_flag = exitcodes.EXIT_STOPLOSS
+             self.exit_message = "Trade Completed"
+             return False
           ret =  False
           for order in self.sl_orders:
               status = self.kite.order_history(order)[-1]['status'] 
-              if status == "COMPLETE":
+              if status == "COMPLETE" or status == "CANCELLED":
                  logging.info(f"SL Order {order} is Executed")
                  self.sl_orders.remove(order)
-                 self.sl_triggerd = True
+                 self.sl_triggered = True
                  ret = True
           return ret
 
       def get_ltp_of_order(self,order_id):
-          instument = self.odf.query(f"SL_Order_ID =={ order_id}")['Option'] 
-          return self.kite.ltp(instument)
+          #instument = self.odf.query(f"SL_Order_ID =={order_id}")['Option']
+          instument = self.odf.loc[self.odf["SL_Order_ID"] == order_id, 'Option'].iloc[0]
+          ltp = self.kite.ltp(instument)[instument]['last_price']
+          logging.info(f" {instument} is at {ltp}")
+          return ltp
 
       def get_sl_trigger_price(self,order_id):
           return self.kite.order_history(order_id)[-1]['trigger_price'] 
@@ -270,8 +277,9 @@ class IntradaySLStradel():
               old_trigger_price = self.get_sl_trigger_price(sl_order)
               new_trigger_price = int(ltp * self.stop_loss_multiplier)
               new_price = int(self.offset + (ltp * self.stop_loss_multiplier))
-              if new_trigger_price > old_trigger_price + self.sl_trail_diff_gap:
-                   self.kite.modify_order(variety=self.kite.VARIETY_SL,
+              if new_trigger_price < old_trigger_price - self.sl_trail_diff_gap:
+                   self.kite.modify_order(variety=self.kite.VARIETY_REGULAR,
+                                          order_type=self.kite.ORDER_TYPE_SL,
                                           order_id=sl_order,
                                           price=new_price,
                                           trigger_price=new_trigger_price)
@@ -279,7 +287,7 @@ class IntradaySLStradel():
 
 
       def check_and_modfify_sl_trigger(self):
-          if self.sl_order_executed():
+          if self.sl_order_executed() or self.sl_triggered:
              self.update_trigger_of_exiting_sl_order()
 
       def generate_report(self):

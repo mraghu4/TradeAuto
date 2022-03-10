@@ -10,7 +10,7 @@ print(kite.login_url())
 
 #data = kite.generate_session("WOBV6emxxCLsqYYrNJE5THjYZMlUsIEK", api_secret="boud3qal7mgpra74yhxj1gbaovghscxq")
 #kite.set_access_token(data["access_token"])
-kite.set_access_token("WOBV6emxxCLsqYYrNJE5THjYZMlUsIEK")
+kite.set_access_token("3edPiBleZbPBo24vbimgiWOY6juifpnW")
 
 #print(data["access_token"])
 
@@ -39,7 +39,7 @@ except Exception as e:
 
 #print(kite.orders())
 #print(kite.order_history(210824400551980))
-print(get_avg_price_of_order('210824400551980'))
+#print(get_avg_price_of_order('210824400551980'))
 
 # Fetch all orders
 #print(kite.holdings())
@@ -71,3 +71,8 @@ print(ps)
 
 print()
 """
+
+print( kite.orders())
+#print(kite.order_history(order_id=220309401820633))
+#print(kite.order_history(order_id=220309401820633)[-1]['status'])
+#print(kite.ltp("NFO:BANKNIFTY2231035200CE")["NFO:BANKNIFTY2231035200CE"]["last_price"])
