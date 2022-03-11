@@ -256,8 +256,10 @@ class IntradayMultiStradel():
           return ret
 
       def get_ltp_of_order(self,order_id):
-          instument = self.odf.query(f"SL_Order_ID =={ order_id}")['Option'] 
-          return self.kite.ltp(instument)
+          instument = self.odf.loc[self.odf["SL_Order_ID"] == order_id, 'Option'].iloc[0]
+          ltp = self.kite.ltp(instument)[instument]['last_price']
+          logging.info(f" {instument} is at {ltp}")
+          return ltp
 
       def get_sl_trigger_price(self,order_id):
           return self.kite.order_history(order_id)[-1]['trigger_price']
@@ -268,8 +270,9 @@ class IntradayMultiStradel():
               old_trigger_price = self.get_sl_trigger_price(sl_order)
               new_trigger_price = int(ltp * self.stop_loss_multiplier)
               new_price = int(self.offset + (ltp * self.stop_loss_multiplier))
-              if new_trigger_price > old_trigger_price:
-                  self.kite.modify_order(variety=self.kite.VARIETY_SL,
+              if new_trigger_price < old_trigger_price:
+                  self.kite.modify_order(variety=self.kite.VARIETY_REGULAR,
+                                         order_type=self.kite.ORDER_TYPE_SL,
                                          order_id=sl_order,
                                          price=new_price,
                                          trigger_price=new_trigger_price)
@@ -297,7 +300,7 @@ class IntradayMultiStradel():
 
       def cancel_all_sl_orders(self):
           for order in self.sl_orders:
-              self.kite.cancel_order(varity = self.kite.VARIETY_SL,
+              self.kite.cancel_order(variety=self.kite.VARIETY_REGULAR,,
                                      order_id = order)
 
       def close_all_positions(self):
