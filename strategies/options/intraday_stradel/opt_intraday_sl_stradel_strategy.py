@@ -151,7 +151,7 @@ class IntradaySLStradel():
                                ignore_index=True)
           else:
              self.positions.remove(option)
-             max_match_trade_cnt = max(self.odf.query(f"Option == {option}")['Trade Count'])
+             max_match_trade_cnt = max(self.odf.loc[self.odf["Option"] == option, 'Trade Count'])
              self.odf.loc[self.odf.Option == option,
                  ["Exit","Exit Time","Security at Exit","Trade Count"]] = [price,time_now,security_price,max_match_trade_cnt]
           logging.info(f"Level:\n{self.level}")
@@ -248,15 +248,20 @@ class IntradaySLStradel():
       def sl_order_executed(self):
           if len(self.sl_orders) < 1:
              logging.info("All SL orders hit and closing trade")
+             self.close_all_positions()
              self.exit_flag = exitcodes.EXIT_STOPLOSS
              self.exit_message = "Trade Completed"
              return False
           ret =  False
           for order in self.sl_orders:
-              status = self.kite.order_history(order)[-1]['status'] 
+              order_report =  self.kite.order_history(order)[-1]
+              status = order_report['status'] 
               if status == "COMPLETE" or status == "CANCELLED":
                  logging.info(f"SL Order {order} is Executed")
                  self.sl_orders.remove(order)
+                 price = order_report['average_price']
+                 security = self.odf.loc[self.odf["SL_Order_ID"] == order_id, 'Option'].iloc[0]
+                 self.record_trade(security,price,"Exit",0)
                  self.sl_triggered = True
                  ret = True
           return ret

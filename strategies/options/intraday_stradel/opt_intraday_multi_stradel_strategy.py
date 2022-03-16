@@ -247,10 +247,14 @@ class IntradayMultiStradel():
       def sl_order_executed(self):
           ret =  False
           for order in self.sl_orders:
-              status = self.kite.order_history(order)[-1]['status'] 
+              order_report =  self.kite.order_history(order)[-1]
+              status = order_report['status']
               if status == "COMPLETE":
                  logging.info(f"SL Order {order} is Executed")
                  self.sl_orders.remove(order)
+                 price = order_report['average_price']
+                 security = self.odf.loc[self.odf["SL_Order_ID"] == order_id, 'Option'].iloc[0]
+                 self.record_trade(security,price,"Exit",0)
                  logging.info(f"Active SL Orders : {self.sl_orders}")
                  ret = True
           return ret
@@ -300,7 +304,7 @@ class IntradayMultiStradel():
 
       def cancel_all_sl_orders(self):
           for order in self.sl_orders:
-              self.kite.cancel_order(variety=self.kite.VARIETY_REGULAR,,
+              self.kite.cancel_order(variety=self.kite.VARIETY_REGULAR,
                                      order_id = order)
 
       def close_all_positions(self):
