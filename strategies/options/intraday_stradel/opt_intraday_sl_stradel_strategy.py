@@ -307,7 +307,7 @@ class IntradaySLStradel():
 
       def cancel_all_sl_orders(self):
           for order in self.sl_orders:
-              self.kite.cancel_order(varity = self.kite.VARIETY_SL,
+              self.kite.cancel_order(variety=self.kite.VARIETY_REGULAR,
                                      order_id = order)
 
       def close_all_positions(self):
