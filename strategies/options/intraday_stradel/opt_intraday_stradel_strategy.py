@@ -143,9 +143,9 @@ class IntradayStradel():
                                ignore_index=True)
           else:
              self.positions.remove(option)
-             max_match_trade_cnt = max(self.odf.query("Option" == option)['Trade Count'])
-             self.odf.loc[self.odf.Option == option,
-                 ["Exit","Exit Time","Security at Exit","Trade Count"]] = [price,time_now,security_price,max_match_trade_cnt]
+             max_match_trade_cnt = max(self.odf.loc[self.odf["Option"] == option, 'Trade Count'])
+             self.odf.loc[(self.odf.Option == option) & (self.odf."Trade Count" == max_match_trade_cnt),
+                 ["Exit","Exit Time","Security at Exit"]] = [price,time_now,security_price]
              #self.odf.loc[self.odf.Option == option,
              #    ["Exit","Exit Time","Security at Exit"]] = [price,time_now,security_price]
           logging.info(f"Level:\n{self.level}")
