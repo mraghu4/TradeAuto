@@ -260,7 +260,7 @@ class IntradaySLStradel():
                  logging.info(f"SL Order {order} is Executed")
                  self.sl_orders.remove(order)
                  price = order_report['average_price']
-                 security = self.odf.loc[self.odf["SL_Order_ID"] == order_id, 'Option'].iloc[0]
+                 security = self.odf.loc[self.odf["SL_Order_ID"] == order, 'Option'].iloc[0]
                  self.record_trade(security,price,"Exit",0)
                  self.sl_triggered = True
                  ret = True

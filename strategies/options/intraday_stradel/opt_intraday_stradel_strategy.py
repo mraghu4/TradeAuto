@@ -39,7 +39,7 @@ class IntradayStradel():
       exit_message = None
       ist_tz = pytz.timezone('Asia/Kolkata')
       data = []
-      columns = ["Type","Trade Count","Option",
+      columns = ["Type","Trade_Count","Option",
                  "Entry","Entry Time","Security at Entry",
                  "Exit","Exit Time","Security at Exit"]
       trade_count = 0
@@ -139,12 +139,12 @@ class IntradayStradel():
                                "Entry":price,
                                "Entry Time":time_now,
                                "Security at Entry": security_price,
-                               "Trade Count": self.trade_count},
+                               "Trade_Count": self.trade_count},
                                ignore_index=True)
           else:
              self.positions.remove(option)
-             max_match_trade_cnt = max(self.odf.loc[self.odf["Option"] == option, 'Trade Count'])
-             self.odf.loc[(self.odf.Option == option) & (self.odf."Trade Count" == max_match_trade_cnt),
+             max_match_trade_cnt = max(self.odf.loc[self.odf["Option"] == option, 'Trade_Count'])
+             self.odf.loc[(self.odf.Option == option) & (self.odf.Trade_Count == max_match_trade_cnt),
                  ["Exit","Exit Time","Security at Exit"]] = [price,time_now,security_price]
              #self.odf.loc[self.odf.Option == option,
              #    ["Exit","Exit Time","Security at Exit"]] = [price,time_now,security_price]
@@ -293,7 +293,9 @@ class IntradayStradel():
           self.generate_report()
 
       def stop_loss_hit(self):
-          total_current_val = 0 
+          total_current_val = 0
+          total_exit_value = self.odf["Exit"].sum() 
+          self.total_entry_val = total_exit_value - self.total_entry_val
           for p in self.positions:
              total_current_val = (total_current_val +
                                  self.kite.quote(f"{p}")[p]["last_price"])
@@ -350,6 +352,8 @@ class IntradayStradel():
 
       def check_target_hit_exit(self):
           total_entry_val = self.odf["Entry"].sum()
+          total_exit_val = self.odf["Exit"].sum()
+          total_entry_val = total_exit_val - total_entry_val
           total_current_val = 0
           for p in self.positions:
              total_current_val = total_current_val + self.kite.quote(f"{p}")[p]["last_price"]
