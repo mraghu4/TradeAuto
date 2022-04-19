@@ -106,6 +106,7 @@ class IntradayStradel():
                       self.close_all_positions()
                       self.exit_flag = exitcodes.EXIT_ORDER_PLACE_FAILURE
                       self.exit_message = "Order rejected"
+                      return 0
                   else: 
                       return order['average_price']
 
@@ -353,11 +354,10 @@ class IntradayStradel():
       def check_target_hit_exit(self):
           total_entry_val = self.odf["Entry"].sum()
           total_exit_val = self.odf["Exit"].sum()
-          total_entry_val = total_exit_val - total_entry_val
           total_current_val = 0
           for p in self.positions:
              total_current_val = total_current_val + self.kite.quote(f"{p}")[p]["last_price"]
-          profitp = (total_entry_val-total_current_val)/total_entry_val * 100
+          profitp = (total_entry_val-total_current_val-total_exit_val)/total_entry_val * 100
           logging.info(f"\n\tTotal Entry Value: {total_entry_val}"
                        f"\n\tTotal Current value: {total_current_val}"
                        f"\n\tProfit: {profitp}%")
