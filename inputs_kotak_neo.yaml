@@ -2,8 +2,10 @@ inputs:
   cash: 200000
   realtrade: True
   session:
-    api_key: "xxxxxx"
-    api_secret: "xxxxxx"
+    api_key: ""
+    api_secret: ""
+    username: ""
+    password: ""
   strategy:
     name: intra_day_stradel_01
     security: "NSE:NIFTY BANK"

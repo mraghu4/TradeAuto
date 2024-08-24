@@ -3,7 +3,7 @@ inputs:
   realtrade: True
   session:
     api_key: "xxxxx"
-    api_secret: "xxxx"
+    api_secret: "xxxxx"
   strategy:
     name: intra_day_stradel_01
     #security: "NSE:NIFTY BANK"
@@ -13,15 +13,15 @@ inputs:
     #22nd jul 2021 expiry Banknifty option can be given as below
     #opt_name: NFO:BANKNIFTY
     #the quanity you want to trade
-    lotsize: 50
-    #opt_year: 21
-    #opt_month: D
-    #opt_day: "23"
-    #Monthly expirty option format will be...
     opt_name: NFO:NIFTY
-    opt_year: 21
-    opt_month: DEC
-    opt_day: "" 
+    lotsize: 150
+    opt_year: 22
+    opt_month: 1
+    opt_day: "20"
+    #Monthly expirty option format will be...
+    #opt_year: 21
+    3opt_month: DEC
+    #opt_day: "" 
     #option_gap is gap between 2 consecutive contracts
     #  it is 100 for banknifty, 50 for nifty and 20 to 5 for some other stocks etc.
     opt_gap: 50

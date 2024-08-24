@@ -36,3 +36,9 @@ class InputParser:
 
    def get_apisecret(self):
        return self.data.inputs.session.api_secret
+   
+   def get_username(self):
+       return self.data.inputs.session.username
+
+   def get_password(self):
+       return self.data.inputs.session.password
